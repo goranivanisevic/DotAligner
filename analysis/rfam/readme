@@ -1,0 +1,154 @@
+BIN=/home/users/seemann/projects/NWdotplot/bin
+
+gunzip -c /home/projects/rfamclean/Rfam.11.0/data/Rfam.seed.5.gz | stk2tab | tab2fasta | gzip > rfam.seed.5seq.fa.gz
+
+#mir-1
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="mir-1"{print $1,$2"\n"$3}' | split -a4 -l2 -d - mir-1_
+for i in `ls mir-1_*`; do $BIN/getRNAfoldPP.pl $i > ${i}.pp; done
+for i in `ls mir-1_*.pp`; do for j in `ls mir-1_*.pp`; do echo $i $j >> mir-1.nwdotplot; $BIN/NWdotplot $i $j >> mir-1.nwdotplot; done; done
+
+#tRNA
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="tRNA"{print $1,$2"\n"$3}' | head -100 | split -a4 -l2 -d - trna_
+for i in `ls trna_*`; do $BIN/getRNAfoldPP.pl $i > ${i}.pp; done
+for i in `ls trna_*.pp`; do for j in `ls trna_*.pp`; do echo $i $j >> trna.nwdotplot; $BIN/NWdotplot $i $j >> trna.nwdotplot; done; done
+cat trna.nwdotplot | awk 'BEGIN{ORS=""}{if((NR%6==1)){split($1,a,"_");split($2,b,"_");sub(/.pp/,"",a[2]);sub(/.pp/,"",b[2]);print a[2]," ",b[2]," "};if(NR%6==2){sub(/,/,"",$3);print $3"\n"}}' | awk 'BEGIN{ORS=""}{print $3," "; if(NR%50 == 0){print "\n"}}' > trna.nwdotplot.2x2
+
+#RNaseP_nuc
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="RNaseP_nuc"{print $1,$2"\n"$3}' | split -a4 -l2 -d - RNaseP_nuc_
+for i in `ls RNaseP_nuc_*`; do $BIN/getRNAfoldPP.pl $i > ${i}.pp; done
+for i in `ls RNaseP_nuc_*.pp`; do for j in `ls RNaseP_nuc_*.pp`; do echo $i $j >> RNaseP_nuc.nwdotplot; $BIN/NWdotplot $i $j >> RNaseP_nuc.nwdotplot; done; done
+cat RNaseP_nuc.nwdotplot | awk 'BEGIN{ORS=""}{if((NR%6==1)){split($1,a,"_");split($2,b,"_");sub(/.pp/,"",a[2]);sub(/.pp/,"",b[2]);print a[2]," ",b[2]," "};if(NR%6==2){sub(/,/,"",$3);print $3"\n"}}' | awk 'BEGIN{ORS=""}{print $3," "; if(NR%50 == 0){print "\n"}}' > RNaseP_nuc.nwdotplot.2x2
+
+#selection of 10 HACA-box snoRNAs of low APSI
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="snoU85"{print $1,$2"\n"$3}' > snorna.selection
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="snoR74"{print $1,$2"\n"$3}' >> snorna.selection
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="R161"{print $1,$2"\n"$3}' >> snorna.selection
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="SNORA13"{print $1,$2"\n"$3}' >> snorna.selection
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="snR191"{print $1,$2"\n"$3}' >> snorna.selection
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="snoR66"{print $1,$2"\n"$3}' >> snorna.selection
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="snoR83"{print $1,$2"\n"$3}' >> snorna.selection
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="snR8"{print $1,$2"\n"$3}' >> snorna.selection
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="snoR80"{print $1,$2"\n"$3}' >> snorna.selection
+gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk '$2=="SNORA64"{print $1,$2"\n"$3}' >> snorna.selection
+split -a4 -l2 -d snorna.selection snorna_
+time for i in `ls snorna_*`; do $BIN/getRNAfoldPP.pl $i > ${i}.pp; done
+time for i in `ls snorna_*.pp`; do for j in `ls snorna_*.pp`; do echo $i $j >> snorna.nwdotplot; $BIN/NWdotplot $i $j >> snorna.nwdotplot; done; done
+cat snorna.nwdotplot | awk 'BEGIN{ORS=""}{if((NR%6==1)){split($1,a,"_");split($2,b,"_");sub(/.pp/,"",a[2]);sub(/.pp/,"",b[2]);print a[2]," ",b[2]," "};if(NR%6==2){sub(/,/,"",$3);print $3"\n"}}' | awk 'BEGIN{ORS=""}{print $3," "; if(NR%133 == 0){print "\n"}}' > snorna.nwdotplot.2x2
+grep "^>" snorna.selection | awk 'BEGIN{ORS="\",\""}{sub(">","");print $1"_"$2}'
+
+library(pvclust)
+snorna<-read.table("snorna.nwdotplot.2x2")
+snorna.df<-as.data.frame.matrix(snorna)
+result <- pvclust(snorna.df, method.dist="cor", method.hclust="average", nboot=1000)
+pdf("snorna.nwdotplot.bootstrap1000.pdf",width=25,height=10)
+plot(result)
+pvrect(result, alpha=0.95)
+dev.off()
+
+#selection of HACA-box snoRNAs with APSI<90% and 130bp<length<140bp
+for i in `merge.pl <(cut -f1,2 /home/projects/rfamclean/Rfam.11.0/results/overview_pairwiseIdAllFamilies_all ) /home/projects/rfamclean/Rfam.11.0/results/overview_aveSeqLengthPrFamily_all 1,1 |  awk '$2>130 && $2<140 && $5<0.9{print $1}'`; do j=`gunzip -c /home/databases/Rfam/11.0/Rfam.seed.gz | grep -A 8 $i | awk -v FAM=$i 'BEGIN{b=0}{if($2=="ID" && $3==FAM){b=1}; if($2=="ID" && $3!=FAM){b=0}; if($2=="TP" && b){print $0}}'`; echo $i $j; done | grep HACA-box | awk 'BEGIN{ORS=" "}{print $1}END{print "\n"}'
+for i in SNORA1 SNORA13 SNORA14 SNORA15 SNORA16 SNORA17 SNORA18 SNORA19 SNORA2 SNORA21 SNORA22 SNORA29 SNORA38 SNORA41 SNORA42 SNORA43 SNORA46 SNORA47 SNORA48 SNORA49 SNORA5 SNORA50 SNORA51 SNORA52 SNORA55 SNORA58 SNORA64 SNORA66 SNORA68 SNORA69 SNORA7 SNORA70 SNORA71 SNORA72 SNORA75 SNORA76 SNORA84 SNORA9 ceN100 ceN125 ceN126 ceN36-1 ceN38 ceN41 ceN49 ceN58 ceN59 ceN67 ceN80 ceN82 snoF1_F2 snoR639 snoR74 snoU109 snopsi18S-1377 snopsi28S-3316; do
+  gunzip -c rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk -v FAM=$i '$2==FAM{print $1,$2"\n"$3}' >> snorna.selection_l140;
+done
+split -a4 -l2 -d snorna.selection_l140 snornal140_
+time for i in `ls snornal140_*`; do $BIN/getRNAfoldPP.pl $i > ${i}.pp; done
+
+#selection of HACA-box, CD-box and microRNAs with APSI<80% and 130bp<length<140bp (and 135bp<length<140bp for HACA-box)
+for i in `merge.pl <(cut -f1,2 /home/projects/rfamclean/Rfam.11.0/results/overview_pairwiseIdAllFamilies_all ) /home/projects/rfamclean/Rfam.11.0/results/overview_aveSeqLengthPrFamily_all 1,1 |  awk '$2>130 && $2<140 && $5<=0.8{print $1}'`; do j=`gunzip -c /home/databases/Rfam/11.0/Rfam.seed.gz | grep -A 8 $i | awk -v FAM=$i 'BEGIN{b=0}{if($2=="ID" && $3==FAM){b=1}; if($2=="ID" && $3!=FAM){b=0}; if($2=="TP" && b){print $0}}'`; echo $i $j; done > tmp.rfam
+grep CD-box tmp.rfam | wc -l   #3
+for i in `grep CD-box tmp.rfam`; do gunzip -c ../rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk -v FAM=$i '$2==FAM{print $1,$2"\n"$3}' >> benchmark.selection_l140; done
+grep miRNA tmp.rfam | wc -l    #7
+for i in `grep miRNA tmp.rfam`; do gunzip -c ../rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk -v FAM=$i '$2==FAM{print $1,$2"\n"$3}' >> benchmark.selection_l140; done
+for i in `merge.pl <(cut -f1,2 /home/projects/rfamclean/Rfam.11.0/results/overview_pairwiseIdAllFamilies_all ) /home/projects/rfamclean/Rfam.11.0/results/overview_aveSeqLengthPrFamily_all 1,1 |  awk '$2>135 && $2<140 && $5<=0.8{print $1}'`; do j=`gunzip -c /home/databases/Rfam/11.0/Rfam.seed.gz | grep -A 8 $i | awk -v FAM=$i 'BEGIN{b=0}{if($2=="ID" && $3==FAM){b=1}; if($2=="ID" && $3!=FAM){b=0}; if($2=="TP" && b){print $0}}'`; echo $i $j; done > tmp.rfam
+grep HACA-box tmp.rfam | wc -l #12
+for i in `grep HACA-box tmp.rfam`; do gunzip -c ../rfam.seed.5seq.fa.gz | awk 'BEGIN{ORS=""}{if(/^>/){split($1,a,"."); print "\n"a[1]" "$2" "}else{print $1}}'| tail -n +2 | awk -v FAM=$i '$2==FAM{print $1,$2"\n"$3}' >> benchmark.selection_l140; done
+sed 's/-//g' benchmark.selection_l140 | awk '{if(/^>/){n=$0}else{if(length($1)>130 && length($1)<140){print n; print $1}}}' > temp
+awk '{if(/^>/){print substr($1, 0, 12)" "$2}else{print $0}}' temp > benchmark.selection_l140
+grep "^>" benchmark.selection_l140 | cut -d" " -f2 | sort | uniq -c
+      2 MIR1223
+      5 MIR396
+     35 MIR480
+      9 snopsi18S1377
+     27 SNORA16
+     18 SNORA2
+     16 SNORA29
+     18 SNORA43
+     19 SNORA47
+     21 SNORA48
+     11 SNORA50
+     16 SNORA7
+      4 SNORA75
+     18 SNORD94
+     46 U8
+split -a4 -l2 -d benchmark.selection_l140 benchmarkl140_
+time for i in `ls benchmarkl140_*`; do $BIN/getRNAfoldPP.pl $i > ${i}.pp; done
+
+#run NWdotplot
+time for i in `ls snornal140_*.pp`; do for j in `ls snornal140_*.pp`; do echo $i $j >> snornal140.nwdotplot; $BIN/NWdotplot $i $j >> snornal140.nwdotplot; done; done
+cat snornal140.nwdotplot | awk 'BEGIN{ORS=""}{if((NR%6==1)){split($1,a,"_");split($2,b,"_");sub(/.pp/,"",a[2]);sub(/.pp/,"",b[2]);print a[2]," ",b[2]," "};if(NR%6==2){sub(/,/,"",$3);print $3"\n"}}' | awk 'BEGIN{ORS=""}{print $3," "; if(NR%1013 == 0){print "\n"}}' > snornal140.nwdotplot.2x2
+grep "^>" snorna.selection_l140 | awk 'BEGIN{ORS="\",\""}{sub(">","");print $1"_"$2}'
+
+library(pvclust)
+snorna<-read.table("snornal140.nwdotplot.2x2")
+snorna.df<-as.data.frame.matrix(snorna)
+colnames(snorna.df)<-test
+result <- pvclust(snorna.df, method.dist="cor", method.hclust="average", nboot=1000)
+pdf("snornal140.nwdotplot.bootstrap100.pdf",width=180,height=10)
+plot(result)
+pvrect(result, alpha=0.95)
+dev.off()
+seplot(result)
+list2ascii <- function(x,file=paste(deparse(substitute(x)),".txt",sep="")) {
+ tmp.wid = getOption("width")  # save current width
+ options(width=10000)          # increase output width
+ sink(file)                    # redirect output to file
+ print(x)                      # print the object
+ sink()                        # cancel redirection
+ options(width=tmp.wid)        # restore linewidth
+ return(invisible(NULL))       # return (nothing) from function
+} 
+list2ascii(pvpick(result, alpha=0.95, pv="au", type="geq", max.only=TRUE)$clusters, file="snornal140.clusters")
+
+#get members of clusters
+cat snornal140.clusters | awk '{if(/^\[\[/){gsub(/\[/,"",$1);gsub(/\]/,"",$1);c=$1}else{if(/\[\s*/){for(i=2;i<=NF;i++){split($i,a,/_/);gsub(/"/,"",a[2]);print c,a[2]}}}}' > snornal140.clusters.list
+#get non-clustered families as FN
+cmp2lists.pl 4 <(cat snornal140.clusters | awk '{if(/^\[\[/){gsub(/\[/,"",$1);gsub(/\]/,"",$1);c=$1}else{if(/\[\s*/){for(i=2;i<=NF;i++){gsub(/"/,"",$i);split($i,a,"_");print substr(a[1], 0, 11)"_"a[2]}}}}') <(grep "^>" snorna.selection_l140 | awk '{sub(">","");print substr($1, 0, 11)"_"$2}') | awk '{split($1,a,"_");print a[2]}' | sort | uniq -c > snornal140.noclusters.list
+${BIN}/clusterstatistics.pl snornal140.clusters.list snornal140.noclusters.list
+
+
+#global pairwise sequence alignments with blastn parameters
+time for i in `ls snornal140_*.pp`; do for j in `ls snornal140_*.pp`; do echo $i $j >> snornal140.nwseq; $BIN/NWdotplot $i $j -seq >> snornal140.nwseq; done; done
+cat snornal140.nwseq | awk 'BEGIN{ORS=""}{if((NR%4==1)){split($1,a,"_");split($2,b,"_");sub(/.pp/,"",a[2]);sub(/.pp/,"",b[2]);print a[2]," ",b[2]," "};if(NR%4==2){print $3"\n"}}' | awk 'BEGIN{ORS=""}{print $3," "; if(NR%300 == 0){print "\n"}}' | awk 'BEGIN{OFS=" "}{m=$NR;for(i=1;i<=NF;i++){$i=-1*($i-m)};print $0}' > snornal140.nwseq.2x2
+grep "^>" snorna.selection_l140 | awk 'BEGIN{ORS="\",\""}{sub(">","");print $1"_"$2}'
+
+
+#pmcomp
+for i in `ls snornal140_*.fa`; dp
+  RNAfold -p -d2 -noLP < $i > /dev/null
+  NAME1=`head -1 $i | sed 's/^>//' | cut -d" " -f1`
+  for j in `ls snornal140_*.fa`; do
+    NAME2=`head -1 $j | sed 's/^>//' | cut -d" " -f1`;
+    echo $i $j >> snornal140.pmcomp;
+    RNAfold -p -d2 -noLP < $j > /dev/null;
+    LEN1=`awk 'NR==2{print length($1)}' $i`
+    LEN2=`awk 'NR==2{print length($1)}' $j`
+    if [[ $((LEN2-LEN1)) -gt 10 || $((LEN1-LEN2)) -gt 10 ]]; then
+      $BIN/pmcomp.pl ${NAME1}_dp.ps ${NAME2}_dp.ps -D 20 | tail -5 >> snornal140.pmcomp;
+    elif [[ $((LEN2-LEN1)) -gt 5 || $((LEN1-LEN2)) -gt 5 ]]; then
+      $BIN/pmcomp.pl ${NAME1}_dp.ps ${NAME2}_dp.ps -D 10 | tail -5 >> snornal140.pmcomp;
+    else
+      $BIN/pmcomp.pl ${NAME1}_dp.ps ${NAME2}_dp.ps | tail -5 >> snornal140.pmcomp;
+    fi
+  done
+done
+cat snornal140.pmcomp | awk 'BEGIN{ORS=""}{if((NR%6==1)){split($1,a,"_");split($2,b,"_");sub(/.fa/,"",a[2]);sub(/.fa/,"",b[2]);print a[2]," ",b[2]," "};if(NR%6==0){printf("%4.1f\n",$3)}}' | awk 'BEGIN{ORS=""}{print $3," "; if(NR%300 == 0){print "\n"}}' | awk 'BEGIN{OFS=" "}{m=$NR;for(i=1;i<=NF;i++){$i=-1*($i-m)};print $0}' > snornal140.pmcomp.2x2
+
+
+#ROC curve
+pdf("snornal140_roc.pdf",width=6,height=6)
+par(mar=c(5,5,1,1));plot(c(1-0.2719,1-0.9846,1-0.9978,1-0.9997),c(0.9057,0.6063,0.5609,0.4273), type="b", xlab="false positive rate", ylab="true positive rate", cex.axis=1.5, cex.lab=1.5, xlim=c(0,1), ylim=c(0,1), pch=1, lwd=3)
+points(1-0.8035, 0.9735, pch=4, lwd=3)
+points(1-0.7204, 0.7414, pch=2, lwd=3)
+legend("bottomright",legend=c("NWdotplot","Needleman-Wunsch","pmcomp"), pch=c(1,4,2), bty="n", cex=1.5)
+dev.off()
+
