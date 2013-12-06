@@ -6,8 +6,34 @@
  */
 
 #include "nwdp.h"
+#include <map>
 
 using namespace std;
+
+
+void usage_dotaligner(char *program)
+{
+	cerr << "\nDotAligner v0.1";
+	cerr << "\n===============";
+	cerr << "\n   by Stefan E Seemann (seemann@rth.dk)\n";
+	cerr << "\n   Usage:   " << program << " -d <file> -d <file> [ options ]";
+    cerr << "\n   Semi-local pairwise alignment of two base pair probability matrices (dotplots).\n";
+    cerr << "\n   -d --dotplot <file>   ... dotplot file (matrix of base pair probabilities)";
+	cerr << "\n   --seq                 ... calculate sequence alignment\n";
+    cerr << "\n   Debug modes:";
+	cerr << "\n   --printdp             ... print dynamic programming matrices";
+    cerr << "\n   --logodds             ... replace probabilities by expectation normalized log odds";
+    cerr << "\n   --global2             ... global alignment in step 2 (default is local alignment in step 2)";
+    cerr << "\n   -a --alpha <nr>       ... weight of sequence similarity (0..1; default = 0)";
+    cerr << "\n   -g --gaps <nr>        ... gap costs (default = -4)";
+    cerr << "\n   -e --extgaps <nr>     ... affine gap costs to differentiate between opening and extending gaps";
+    cerr << "\n   -s --stemgaps <nr>    ... higher gap costs in base pair stacks of average probability greater than <nr> (0..1)";
+    cerr << "\n   -p --precision <nr>   ... number of digits considered of base pair reliabilities (default = 2)\n";
+	cerr << "\n   --help                ... this output\n";
+    cerr << "\n   Output:   alignment\n\n";
+
+    exit( 1 ) ;
+}
 
 
 int readinput ( istream & is, string & name, string & seq, vector<float> & prob )
@@ -51,6 +77,24 @@ int readinput ( istream & is, string & name, string & seq, vector<float> & prob 
 }
 
 
+void getunpaired( vector<float> & prob, int len, vector<float> & probSgl )
+{
+	float psingle;
+
+	probSgl.reserve( len );
+
+	for( int i = 0; i < len; i++ )
+	{
+		psingle = 1;
+		for( int j = 0; j < len; j++ )
+		{
+			psingle -= prob.at( i*len + j );
+		}
+		probSgl.push_back( psingle );
+	}
+}
+
+
 vector<string> &split(const string &s, char delim, vector<string> &elems)
 {
     stringstream ss(s);
@@ -83,16 +127,25 @@ void reducematrix(vector<float> & prob, int len, int precision)
 /*
  * adapted Needleman-Wunsch algorithm for global alignment of two probability dotplots
  */
-float nwdp( vector<float> & prob_1, int sidx_1, int* idx_1_aln, int len_1, vector<float> & prob_2, int sidx_2, int* idx_2_aln, int len_2, float gappenalty, bool prm )
+float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int idx_1, int* idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int idx_2, int* idx_2_aln, int len_2, bool prm )
 {
     float* subprob_1 = new float[len_1];
     float* subprob_2 = new float[len_2];
+    string subseq_1, subseq_2;
+
+    int sidx_1 = idx_1 * seq_1.length();
+    int sidx_2 = idx_2 * seq_2.length();
 
     // get basepair probabilities that should be aligned
     for( int i = 0; i < len_1; i++ )
-    	subprob_1[ i ] = prob_1.at( sidx_1 + idx_1_aln[ i ] );
+    	subprob_1[ i ] = probDbl_1.at( sidx_1 + idx_1_aln[ i ] );
     for( int j = 0; j < len_2; j++ )
-    	subprob_2[ j ] = prob_2.at( sidx_2 + idx_2_aln[ j ] );
+    	subprob_2[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ j ] );
+    // get subsequence that should be aligned
+    for( int i = 0; i < len_1; i++ )
+    	subseq_1 += seq_1.at( idx_1_aln[ i ] );
+    for( int j = 0; j < len_2; j++ )
+    	subseq_2 += seq_2.at( idx_2_aln[ j ] );
 
     // Dynamic programming matrix
     float ** F = new float * [ len_2 + 1  ];
@@ -100,10 +153,10 @@ float nwdp( vector<float> & prob_1, int sidx_1, int* idx_1_aln, int len_1, vecto
     	F[ j ] = new float [ len_1 + 1 ];
 
     // Initialize traceback and F matrix (fill in first row and column)
-    nwdp_initF( F, len_1, len_2, gappenalty );
+    nwdp_initF( F, len_1, len_2 );
 
     // Create alignment
-    float distance = nwdb_align( F, subprob_1, len_1, subprob_2, len_2, gappenalty );
+    float distance = nwdb_align( F, seq_1.c_str()[idx_1], probSgl_1.at(idx_1), subseq_1, subprob_1, len_1, seq_2.c_str()[idx_2], probSgl_2.at(idx_2), subseq_2, subprob_2, len_2 );
 
 /*    if( prm )
     {
@@ -121,14 +174,14 @@ float nwdp( vector<float> & prob_1, int sidx_1, int* idx_1_aln, int len_1, vecto
 }
 
 
-void nwdp_initF( float ** F, int L1, int L2, float d )
+void nwdp_initF( float ** F, int L1, int L2 )
 {
 	F[ 0 ][ 0 ] =  0. ;
 
     for( int i = 1; i <= L1; i++ )
-     	F[ 0 ][ i ] =  i * d ;
+     	F[ 0 ][ i ] =  i * gappenalty ;
     for( int j = 1; j <= L2; j++ )
-      	F[ j ][ 0 ] =  j * d ;
+      	F[ j ][ 0 ] =  j * gappenalty ;
 }
 
 
@@ -144,27 +197,66 @@ void nwdp_initTB( char ** traceback, int L1, int L2 )
 }
 
 
-float nwdb_align( float ** F, float* prob_1, int L1, float* prob_2, int L2, int gap )
+float nwdb_align( float ** F, char nuc_1, float probSgl_1, string seq_1, float* probDbl_1, int L1, char nuc_2, float probSgl_2, string seq_2, float* probDbl_2, int L2 )
 {
-    float fU, fD, fL, bpdist;
+    float fU, fD, fL;
+    float pnullij, psi_1, psi_2, delta, tau, sigma, omega_1, omega_2;
     char ptr;
 
+    // base pair similarity of bases pairing with nuc_1 and bases pairing with nuc_2
     for( int j = 1; j <= L2; j++ )
     {
             for( int i = 1; i <= L1; i++ )
             {
-                    bpdist = abs( prob_1[ i-1 ] - prob_2[ j-1 ] );
+            		// normalized log odds of base pair probabilities weighted by paired probabilities
+            		pnullij = pnullDbl[ 4*nucIdx.at(nuc_1) + nucIdx.at(seq_1.at(i-1)) ];
+            		psi_1 = log( probDbl_1[ i-1 ] / pnullij ) / log( 1 / pnullij );
+            		pnullij = pnullDbl[ 4*nucIdx.at(nuc_2) + nucIdx.at(seq_2.at(j-1)) ];
+            		psi_2 = log( probDbl_2[ j-1 ] / pnullij ) / log( 1 / pnullij );
+            		// tau = 1 - 2 * | P_a - P_b | -> match=1, mismatch=-1
+            		delta = abs( psi_1 - psi_2 );
+                    tau = (1 - delta - delta);
 
-                    fU = F[ j-1 ][ i ] + gap ;
-                    fD = F[ j-1 ][ i-1 ] + bpdist ;
-                    fL = F[ j ][ i-1 ] + gap ;
+                    fU = F[ j-1 ][ i ] + gappenalty;
+                    fD = F[ j-1 ][ i-1 ] + tau;
+                    fL = F[ j ][ i-1 ] + gappenalty;
 
-                    F[ j ][ i ] = min3( fU, fD, fL, &ptr ) ;
-            }
+                    F[ j ][ i ] = max3( fU, fD, fL, &ptr );
+             }
     }
+    // sequence similarity of nuc_1 and nuc_2
+    omega_1 = log( probSgl_1 / pnullSgl[ nucIdx.at(nuc_1) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_1) ] );
+    omega_2 = log( probSgl_2 / pnullSgl[ nucIdx.at(nuc_2) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_2) ] );
+    delta = abs( omega_1 - omega_2 );
+    sigma = ( nuc_1 == nuc_2 ) ? 1 - delta - delta : 0;
 
-    return F[ L2 ][ L1 ];
+    return alpha * sigma + F[ L2 ][ L1 ];
 }
+
+
+float  max3( float f1, float f2, float f3, char* ptr )
+{
+        float  max = 0 ;
+
+        if( f1 >= f2 && f1 >= f3 )
+        {
+                max = f1 ;
+                *ptr = '|' ;
+        }
+        else if( f2 > f3 )
+        {
+                max = f2 ;
+                *ptr = '\\' ;
+        }
+        else
+        {
+                max = f3 ;
+                *ptr = '-' ;
+        }
+
+        return  max ;
+}
+
 
 
 float  min3( float f1, float f2, float f3, char* ptr )
@@ -222,7 +314,7 @@ void print_matrixdp( float ** F, float * prob_1, int L1, float * prob_2, int L2 
 }
 
 
-float nwdistance( float ** D, int L1, int L2, int * idx_1_aln, int * idx_2_aln, int & L1_aln, int & L2_aln, int precision, float gappenalty, bool prm)
+float nwdistance( float ** D, int L1, int L2, int * idx_1_aln, int * idx_2_aln, int & L1_aln, int & L2_aln, int precision, bool global, bool prm)
 {
     int i = 0, j = 0;
     float distance;
@@ -235,10 +327,9 @@ float nwdistance( float ** D, int L1, int L2, int * idx_1_aln, int * idx_2_aln, 
     gap = gappenalty * gap / ( L1 * L2 );
     char p[10];
     sprintf(p, "%.*lf", precision, gap);
-    gap = ( atof(p) > 0. ) ? atof(p) : 0.01;
-	#if DEBUG
-    	cout << "gap: " << gap << endl;
-	#endif
+    gap = ( atof(p) < 0. ) ? atof(p) : -0.01;
+    if( prm )
+    	cout << "Step 2 gap penalty: " << gap << endl;
 
     /* Dynamic programming matrix */
     float ** F = new float * [ L2+1 ];
@@ -269,17 +360,37 @@ float nwdistance( float ** D, int L1, int L2, int * idx_1_aln, int * idx_2_aln, 
             fD = F[ j-1 ][ i-1 ] + D[ j-1 ][ i-1 ];
             fL = F[ j ][ i-1 ] + gap;
 
-            F[ j ][ i ] = min3( fU, fD, fL, &ptr );
+            F[ j ][ i ] = max3( fU, fD, fL, &ptr );
             traceback[ j ][ i ] =  ptr;
         }
     }
     distance = F[ L2 ][ L1 ];
     i--; j--;
 
+    /* find maximal entry of similarity matrix F for local alignments */
+    if( !global ) {
+    	float lmax = 0;
+    	int li = 0;
+    	int lj = 0;
+        for( j = 1; j <= L2; j++ )
+        	for( i = 1; i <= L1; i++ )
+        		if( F[ j ][ i ] >= lmax ) {
+        			lmax = F[ j ][ i ];
+        			li = i;
+        			lj = j;
+        		}
+        i = li;
+        j = lj;
+    }
+    cerr << i << " " << j << endl;
+
     /* backtracking */
     int k = 0;
     while( i > 0 || j > 0 )
     {
+    	if( !global )
+    		if( F[ j ][ i ] <= 0 )
+    			break;
     	//cout << j << " " << i << " " << traceback[ j ][ i ] << endl;
     	switch( traceback[ j ][ i ] )
         {
@@ -515,7 +626,7 @@ int nw_align( int **F, char **traceback, string seq_1, string seq_2, string& seq
                         fD = F[ i-1 ][ j-1 ] + s[ x ][ y ] ;
                         fL = F[ i ][ j-1 ] - d ;
 
-                        F[ i ][ j ] = max3( fU, fD, fL, &ptr ) ;
+                        F[ i ][ j ] = (int) max3( (float) fU, (float) fD, (float) fL, &ptr ) ;
 
                         traceback[ i ][ j ] =  ptr ;
                 }
@@ -548,30 +659,6 @@ int nw_align( int **F, char **traceback, string seq_1, string seq_2, string& seq
         reverse( seq_2_al.begin(), seq_2_al.end() );
 
         return  F[ L2 ][ L1 ] ;
-}
-
-
-int  max3( int f1, int f2, int f3, char * ptr )
-{
-        int  max = 0 ;
-
-        if( f1 >= f2 && f1 >= f3 )
-        {
-                max = f1 ;
-                *ptr = '|' ;
-        }
-        else if( f2 > f3 )
-        {
-                max = f2 ;
-                *ptr = '\\' ;
-        }
-        else
-        {
-                max = f3 ;
-                *ptr = '-' ;
-        }
-
-        return  max ;
 }
 
 
