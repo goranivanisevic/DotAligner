@@ -1,0 +1,34 @@
+#RF00001	120	1428	5S ribosomal RNA	Published; PMID:11283358
+#RF00004	194	420	U2 spliceosomal RNA	Published; PMID:2339054; Griffiths-Jones SR
+#RF00013	189	310	6S / SsrS RNA	Published; PMID:15811922
+#RF00015	138	346	U4 spliceosomal RNA	Published; PMID:2339054; Griffiths-Jones SR
+#RF00020	118	364	U5 spliceosomal RNA	Published; PMID:2339054; Griffiths-Jones SR
+#RF00026	107	380	U6 spliceosomal RNA	Published; PMID:2339054; Griffiths-Jones SR
+#RF00050	139	292	FMN riboswitch (RFN element)	Published; PMID:12456892
+#RF00059	105	234	TPP riboswitch (THI element)	Published; PMID:12376536; Moxon SJ
+#RF00162	108	870	SAM riboswitch (S box leader)	Published; PMID:10094622
+#RF00167	103	270	Purine riboswitch	Published; PMID:12787499
+#RF00229	123	186	Picornavirus internal ribosome entry site (IRES)	Predicted; PFOLD
+#RF00379	135	216	ydaO/yuaA leader	Predicted; Barrick JE, Breaker RR
+#RF00380	170	318	ykoK leader	Predicted; Barrick JE, Breaker RR
+#RF00442	107	222	ykkC-yxkD leader	Predicted; Barrick JE, Breaker RR
+#RF00557	140	198	Ribosomal protein L10 leader	Predicted; CMFinder, Barrick JE, Moy RH
+#RF00645	116	220	microRNA MIR169 2	Predicted; WAR; Wilkinson A
+#RF01055	137	324	Moco (molybdenum cofactor) riboswitch	Published; PMID:18363797
+#RF01118	109	698	Pseudoknot of the domain G(G12) of 23S ribosomal RNA	Pseudobase
+#RF01685	109	182	6S-Flavo RNA	Published; PMID:20230605;
+#RF01699	175	390	Clostridiales-1 RNA	Published; PMID:20230605;
+#RF01705	103	436	Flavo-1 RNA	Published; PMID:20230605;
+#RF01725	145	880	SAM-I/IV variant riboswitch	Published; PMID:20230605;
+#RF01739	119	2042	glnA RNA	Published; PMID:20230605;
+#RF01745	183	380	manA RNA	Published; PMID:20230605;
+#RF01750	163	384	pfl RNA	Published; PMID:20230605;
+#RF01794	156	186	sok antitoxin	Published; PMID:17462020
+#RF01831	101	200	THF riboswitch	Published; PMID:20659680
+#RF01849	133	228	Alphaproteobacteria transfer-messenger RNA	Published; PMID:19617710
+#RF01942	124	346	microRNA mir-1937	Predicted; RNAalifold
+#RF01999	119	292	Group II catalytic intron D1-D4-2	Predicted; Weinberg Z
+#RF02001	174	1082	Group II catalytic intron D1-D4-3	Predicted; Weinberg Z
+#RF02003	139	204	Group II catalytic intron D1-D4-4	Predicted; Weinberg Z
+#RF02012	152	492	Group II catalytic intron D1-D4-7	Predicted; Weinberg Z
+#RF02033	129	224	HNH endonuclease-associated RNA and ORF (HEARO) RNA	Published; PMID:12376536; Weinberg Z
