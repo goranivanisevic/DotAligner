@@ -24,13 +24,17 @@ void usage_dotaligner(char *program)
 	cerr << "\n   --printdp             ... print dynamic programming matrices";
     cerr << "\n   --logodds             ... replace probabilities by expectation normalized log odds";
     cerr << "\n   --global2             ... global alignment in step 2 (default is local alignment in step 2)";
-    cerr << "\n   -a --alpha <nr>       ... weight of sequence similarity (0..1; default = 0)";
-    cerr << "\n   -g --gaps <nr>        ... gap costs (default = -4)";
-    cerr << "\n   -e --extgaps <nr>     ... affine gap costs to differentiate between opening and extending gaps";
-    cerr << "\n   -s --stemgaps <nr>    ... higher gap costs in base pair stacks of average probability greater than <nr> (0..1)";
-    cerr << "\n   -p --precision <nr>   ... number of digits considered of base pair reliabilities (default = 2)\n";
+    cerr << "\n   -k --kappa <nr>       ... weight of sequence similarity (0..1; default = 0.5); 1 - kappa is weight of dotplots";
+    cerr << "\n   -a --alpha <nr>       ... affine gap costs = alpha + k * beta (k gaps; alpha default = -4)";
+    cerr << "\n                             set <alpha> equal 0 to make the score becomes larger as a linear function of gap length";
+    cerr << "\n   -b --beta <nr>        ... affine gap costs = alpha + k * beta (k gaps; beta default = -1)";
+    cerr << "\n                             set <beta> equal 0 to keep the score similar regardless of gap length";
+    cerr << "\n   -p --precision <nr>   ... number of digits considered of base pair reliabilities (default = 2)";
+    cerr << "\n   -m --maxshift <nr>    ... maximal shift of two input sequences in the final alignment (default 50% of longer sequence)";
+    cerr << "\n                             speeds up the calculation by ignoring pairwise comparisons of distant nucleotides";
+    cerr << "\n                             local alignments may be missed for long sequences if <maxshift> is set too low\n";
 	cerr << "\n   --help                ... this output\n";
-    cerr << "\n   Output:   alignment\n\n";
+    cerr << "\n   Output:   similarity and alignment\n\n";
 
     exit( 1 ) ;
 }
@@ -129,6 +133,7 @@ void reducematrix(vector<float> & prob, int len, int precision)
  */
 float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int idx_1, int* idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int idx_2, int* idx_2_aln, int len_2, bool prm )
 {
+    float sim;
     float* subprob_1 = new float[len_1];
     float* subprob_2 = new float[len_2];
     string subseq_1, subseq_2;
@@ -147,41 +152,66 @@ float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, 
     for( int j = 0; j < len_2; j++ )
     	subseq_2 += seq_2.at( idx_2_aln[ j ] );
 
-    // Dynamic programming matrix
-    float ** F = new float * [ len_2 + 1  ];
-    for( int j = 0; j <= len_2; j++ )
-    	F[ j ] = new float [ len_1 + 1 ];
-
-    // Initialize traceback and F matrix (fill in first row and column)
-    nwdp_initF( F, len_1, len_2 );
-
     // Create alignment
-    float distance = nwdb_align( F, seq_1.c_str()[idx_1], probSgl_1.at(idx_1), subseq_1, subprob_1, len_1, seq_2.c_str()[idx_2], probSgl_2.at(idx_2), subseq_2, subprob_2, len_2 );
+   	sim = nwdb_align_affinegaps( seq_1.c_str()[idx_1], probSgl_1.at(idx_1), subseq_1, subprob_1, len_1, seq_2.c_str()[idx_2], probSgl_2.at(idx_2), subseq_2, subprob_2, len_2 );
+    //cerr << seq_1.c_str()[idx_1] << " " << subseq_1 << " " << seq_2.c_str()[idx_2] << " " << subseq_2 << " " << sim << endl;
 
-/*    if( prm )
-    {
-            cout << "\nDynamic programming matrix: " << endl;
-            print_matrixdp( F, subprob_1, len_1, subprob_2, len_2 );
-            cout << endl;
-    }
-*/
-    for( int j = 0; j <= len_2; j++ )  delete[] F[ j ];
-	delete[] F;
-	delete[] subprob_1;
-	delete[] subprob_2;
+   	delete[] subprob_1;
+   	delete[] subprob_2;
 
-    return distance;
+    return ( sim > 0 ) ? sim : 0;
 }
 
 
+/*
+ * initialize matrix of costs for alignment of prefixes (a_1 ... a_i; b_1 ... b_j)
+ */
 void nwdp_initF( float ** F, int L1, int L2 )
 {
 	F[ 0 ][ 0 ] =  0. ;
 
+	for( int j = 1; j <= L2; j++ )
+		for( int i = 1; i <= L1; i++ )
+			F[ j ][ i ] = INFINITE;
+
     for( int i = 1; i <= L1; i++ )
-     	F[ 0 ][ i ] =  i * gappenalty ;
+     	F[ 0 ][ i ] =  i * alpha;
     for( int j = 1; j <= L2; j++ )
-      	F[ j ][ 0 ] =  j * gappenalty ;
+      	F[ j ][ 0 ] =  j * alpha;
+}
+
+
+/*
+ * initialize matrix of costs for alignment of prefixes (a_1 ... a_i; b_1 ... b_j)
+ * for affine gap costs
+ */
+void nwdp_initF_affinegaps( float ** F, int L1, int L2 )
+{
+	F[ 0 ][ 0 ] =  0. ;
+
+	for( int j = 1; j <= L2; j++ )
+		for( int i = 1; i <= L1; i++ )
+			F[ j ][ i ] = INFINITE;
+
+    for( int i = 1; i <= L1; i++ )
+     	F[ 0 ][ i ] =  alpha + i * beta;
+    for( int j = 1; j <= L2; j++ )
+      	F[ j ][ 0 ] =  alpha + j * beta;
+}
+
+
+/*
+ * initialize matrix of costs for alignment of prefixes (a_1 ... a_i; b_1 ... b_j)
+ * that ends with a gap
+ */
+void nwdp_initGap( float ** Q, int L1, int L2 )
+{
+	Q[ 0 ][ 0 ] =  0. ;
+
+    for( int i = 1; i <= L1; i++ )
+     	Q[ 0 ][ i ] =  INFINITE;
+    for( int j = 1; j <= L2; j++ )
+      	Q[ j ][ 0 ] =  INFINITE;
 }
 
 
@@ -197,11 +227,17 @@ void nwdp_initTB( char ** traceback, int L1, int L2 )
 }
 
 
-float nwdb_align( float ** F, char nuc_1, float probSgl_1, string seq_1, float* probDbl_1, int L1, char nuc_2, float probSgl_2, string seq_2, float* probDbl_2, int L2 )
+float nwdb_align( char nuc_1, float probSgl_1, string seq_1, float* probDbl_1, int L1, char nuc_2, float probSgl_2, string seq_2, float* probDbl_2, int L2 )
 {
     float fU, fD, fL;
     float pnullij, psi_1, psi_2, delta, tau, sigma, omega_1, omega_2;
     char ptr;
+
+    // Initialize dynamic programming matrix F (fill in first row and column)
+    float ** F = new float * [ L2 + 1  ];
+    for( int j = 0; j <= L2; j++ )
+    	F[ j ] = new float [ L1 + 1 ];
+    nwdp_initF( F, L1, L2 );
 
     // base pair similarity of bases pairing with nuc_1 and bases pairing with nuc_2
     for( int j = 1; j <= L2; j++ )
@@ -210,27 +246,121 @@ float nwdb_align( float ** F, char nuc_1, float probSgl_1, string seq_1, float* 
             {
             		// normalized log odds of base pair probabilities weighted by paired probabilities
             		pnullij = pnullDbl[ 4*nucIdx.at(nuc_1) + nucIdx.at(seq_1.at(i-1)) ];
-            		psi_1 = log( probDbl_1[ i-1 ] / pnullij ) / log( 1 / pnullij );
+            		//psi_1 = log( probDbl_1[ i-1 ] / pnullij ) / log( 1 / pnullij );
+                    psi_1 = ( probDbl_1[ i-1 ] == 0 ) ? INFINITE : log( probDbl_1[ i-1 ] / pnullij ) / log( 1 / pnullij );
+               		//psi_1 = probDbl_1[ i-1 ] / pnullij;
             		pnullij = pnullDbl[ 4*nucIdx.at(nuc_2) + nucIdx.at(seq_2.at(j-1)) ];
-            		psi_2 = log( probDbl_2[ j-1 ] / pnullij ) / log( 1 / pnullij );
+            		//psi_2 = log( probDbl_2[ j-1 ] / pnullij ) / log( 1 / pnullij );
+            		psi_2 = ( probDbl_2[ j-1 ] == 0 ) ? INFINITE : log( probDbl_2[ j-1 ] / pnullij ) / log( 1 / pnullij );
+            		//psi_2 = probDbl_2[ j-1 ] / pnullij;
             		// tau = 1 - 2 * | P_a - P_b | -> match=1, mismatch=-1
             		delta = abs( psi_1 - psi_2 );
-                    tau = (1 - delta - delta);
+                    tau = delta / 2;
 
-                    fU = F[ j-1 ][ i ] + gappenalty;
+                    fU = F[ j-1 ][ i ] + alpha;
                     fD = F[ j-1 ][ i-1 ] + tau;
-                    fL = F[ j ][ i-1 ] + gappenalty;
+                    fL = F[ j ][ i-1 ] + alpha;
 
                     F[ j ][ i ] = max3( fU, fD, fL, &ptr );
              }
     }
     // sequence similarity of nuc_1 and nuc_2
     omega_1 = log( probSgl_1 / pnullSgl[ nucIdx.at(nuc_1) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_1) ] );
+    //omega_1 = probSgl_1 / pnullSgl[ nucIdx.at(nuc_1) ];
     omega_2 = log( probSgl_2 / pnullSgl[ nucIdx.at(nuc_2) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_2) ] );
+    //omega_2 = probSgl_2 / pnullSgl[ nucIdx.at(nuc_2) ];
     delta = abs( omega_1 - omega_2 );
-    sigma = ( nuc_1 == nuc_2 ) ? 1 - delta - delta : 0;
+    sigma = ( nuc_1 == nuc_2 ) ? delta / 2 : 0;
 
-    return alpha * sigma + F[ L2 ][ L1 ];
+    float similarity = kappa * sigma + ( 1 - kappa ) * F[ L2 ][ L1 ];
+
+    // free memory
+    for( int j = 0; j <= L2; j++ )  delete[] F[ j ];
+  	delete[] F;
+
+    return similarity;
+}
+
+
+float nwdb_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, float* probDbl_1, int L1, char nuc_2, float probSgl_2, string seq_2, float* probDbl_2, int L2 )
+{
+    float pnullij, psi_1, psi_2, delta, tau, omega_1, omega_2;
+    char ptr;
+    float ** F, ** Q, ** P;
+    const float nullprob = 1e-5;
+
+    // length of shorter sequence
+    int minlen = ( L2 > L1 ) ? L1 : L2;
+
+    // opening gap penalty
+    float gapopen = alpha + beta;
+
+    // Initialize dynamic programming matrix F (fill in first row and column)
+    F = new float * [ L2 + 1  ];
+    for( int j = 0; j <= L2; j++ )
+    	F[ j ] = new float [ L1 + 1 ];
+    nwdp_initF_affinegaps( F, L1, L2 );
+
+    // Initialize Q and P matrices for cost of alignments that end with a gap
+    Q = new float * [ L2 + 1  ];
+    for( int j = 0; j <= L2; j++ )
+    	Q[ j ] = new float [ L1 + 1 ];
+    nwdp_initGap( Q, L1, L2 );
+    P = new float * [ L2 + 1  ];
+    for( int j = 0; j <= L2; j++ )
+      	P[ j ] = new float [ L1 + 1 ];
+   	nwdp_initGap( P, L1, L2 );
+
+    // base pair similarity of bases pairing with nuc_1 and bases pairing with nuc_2
+    for( int j = 1; j <= L2; j++ )
+    {
+    	for( int i = 1; i <= L1; i++ )
+        {
+    		// calculate P
+    		P[ j ][ i ] = max3( P[ j-1 ][ i ] + beta, F[ j-1 ][ i ] + gapopen, INFINITE, &ptr );
+
+    		// calculate Q
+    		Q[ j ][ i ] = max3( INFINITE, F[ j ][ i-1 ] + gapopen, Q[ j ][ i-1 ] + beta, &ptr );
+
+            // normalized log odds of base pair probabilities weighted by paired probabilities
+            pnullij = pnullDbl[ 4*nucIdx.at(nuc_1) + nucIdx.at(seq_1.at(i-1)) ];
+            psi_1 = ( probDbl_1[ i-1 ] <= nullprob ) ? log( nullprob / pnullij ) / log( 1 / pnullij ) : log( probDbl_1[ i-1 ] / pnullij ) / log( 1 / pnullij );
+            //psi_1 = probDbl_1[ i-1 ] / pnullij;
+            pnullij = pnullDbl[ 4*nucIdx.at(nuc_2) + nucIdx.at(seq_2.at(j-1)) ];
+            psi_2 = ( probDbl_2[ j-1 ] <= nullprob ) ? log( nullprob / pnullij ) / log( 1 / pnullij ) : log( probDbl_2[ j-1 ] / pnullij ) / log( 1 / pnullij );
+            //psi_2 = probDbl_2[ j-1 ] / pnullij;
+            delta = abs( psi_1 - psi_2 );
+            tau = ( delta < 1 ) ? 1 - delta : 0;
+            //cerr << "DELTA " << delta << endl;
+            //cerr << "TAU " << probDbl_1[ i-1 ] << " " << psi_1 << " " << probDbl_2[ j-1 ] << " " << psi_2 << " " << tau << endl;
+
+            // calculate F
+            F[ j ][ i ] = max3( P[ j ][ i ], F[ j-1 ][ i-1 ] + tau, Q[ j ][ i ], &ptr );
+        }
+    }
+    // sequence similarity of nuc_1 and nuc_2
+    float sigma = 0;
+    if( kappa )
+    {
+    	omega_1 = ( probSgl_1 <= nullprob ) ? log( nullprob / pnullSgl[ nucIdx.at(nuc_1) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_1) ] ) : log( probSgl_1 / pnullSgl[ nucIdx.at(nuc_1) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_1) ] );
+    	//omega_1 = probSgl_1 / pnullSgl[ nucIdx.at(nuc_1) ];
+    	omega_2 = ( probSgl_2 <= nullprob ) ? log( nullprob / pnullSgl[ nucIdx.at(nuc_2) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_2) ] ) : log( probSgl_2 / pnullSgl[ nucIdx.at(nuc_2) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_2) ] );
+    	//omega_2 = probSgl_2 / pnullSgl[ nucIdx.at(nuc_2) ];
+    	delta = abs( omega_1 - omega_2 );
+    	sigma = ( nuc_1 == nuc_2 && delta < 1 ) ? 1 - delta : 0;
+    }
+    float similarity = kappa * sigma + ( 1 - kappa ) * F[ L2 ][ L1 ] / minlen;
+    //cerr << "SIGMA " << sigma << " " << probSgl_1 << " " << omega_1 << " " << probSgl_2 << " " << omega_2 << " F/minL " << F[ L2 ][ L1 ] / minlen << " SIM " << similarity << endl;
+
+    // free memory
+    for( int j = 0; j <= L2; j++ )  delete[] F[ j ];
+  	delete[] F;
+    for( int j = 0; j <= L2; j++ )  delete[] Q[ j ];
+    delete[] Q;
+    for( int j = 0; j <= L2; j++ )  delete[] P[ j ];
+    delete[] P;
+
+    return similarity;
 }
 
 
@@ -283,13 +413,20 @@ float  min3( float f1, float f2, float f3, char* ptr )
 }
 
 
+float max( float f1, float f2 )
+{
+    return ( f1 >= f2 ) ? f1 : f2;
+}
+
+
 float min( float f1, float f2 )
 {
     return ( f1 <= f2 ) ? f1 : f2;
 }
 
 
-void print_matrixdp( float ** F, float * prob_1, int L1, float * prob_2, int L2 )
+template <typename T>
+void print_matrixdp( T ** F, float * prob_1, int L1, float * prob_2, int L2 )
 {
     cout << "        ";
     for( int i = 0; i < L1; i++ )
@@ -314,62 +451,56 @@ void print_matrixdp( float ** F, float * prob_1, int L1, float * prob_2, int L2 
 }
 
 
-float nwdistance( float ** D, int L1, int L2, int * idx_1_aln, int * idx_2_aln, int & L1_aln, int & L2_aln, int precision, bool global, bool prm)
+float simalign( float ** Z, int L1, int L2, int * idx_1_aln, int * idx_2_aln, int & L1_aln, int & L2_aln, int precision, bool global, bool prm)
 {
     int i = 0, j = 0;
-    float distance;
+    float sim;
 
-    /* get gap penalty as mean of all distances */
+    /* get gap penalty as mean of all similarities
     float gap = 0;
     for( j = 0; j < L2; j++ )
         for( i = 0; i < L1; i++ )
         	gap += D[ j ][ i ];
-    gap = gappenalty * gap / ( L1 * L2 );
+    gap = alpha * gap / ( L1 * L2 );
     char p[10];
     sprintf(p, "%.*lf", precision, gap);
     gap = ( atof(p) < 0. ) ? atof(p) : -0.01;
     if( prm )
-    	cout << "Step 2 gap penalty: " << gap << endl;
+    	cout << "Step 2 gap penalty: " << gap << endl; */
 
     /* Dynamic programming matrix */
     float ** F = new float * [ L2+1 ];
     for( j = 0; j <= L2; j++ )
     	F[ j ] = new float [ L1+1 ];
+    nwdp_initF( F, L1, L2 );
 
     /* Traceback matrix */
     char ** traceback = new char * [ L2+1 ];
     for( j = 0; j <= L2; j++ )
     	traceback[ j ] = new char [ L1+1 ];
-
-    /* Initialize traceback and F matrix (fill in first row and column) */
-    for( i = 0; i <= L1; i++ )
-     	F[ 0 ][ i ] = i*gap;
-    for( j = 1; j <= L2; j++ )
-      	F[ j ][ 0 ] = j*gap;
     nwdp_initTB( traceback, L1, L2 );
 
     /* create alignment */
     float fU, fD, fL;
     char ptr;
-
     for( j = 1; j <= L2; j++ )
     {
     	for( i = 1; i <= L1; i++ )
         {
-    		fU = F[ j-1 ][ i ] + gap;
-            fD = F[ j-1 ][ i-1 ] + D[ j-1 ][ i-1 ];
-            fL = F[ j ][ i-1 ] + gap;
+    		fU = F[ j-1 ][ i ] + alpha;
+            fD = F[ j-1 ][ i-1 ] + Z[ j-1 ][ i-1 ];
+            fL = F[ j ][ i-1 ] + alpha;
 
             F[ j ][ i ] = max3( fU, fD, fL, &ptr );
             traceback[ j ][ i ] =  ptr;
         }
     }
-    distance = F[ L2 ][ L1 ];
+    sim = F[ L2 ][ L1 ];
     i--; j--;
 
     /* find maximal entry of similarity matrix F for local alignments */
     if( !global ) {
-    	float lmax = 0;
+    	float lmax = INFINITE;
     	int li = 0;
     	int lj = 0;
         for( j = 1; j <= L2; j++ )
@@ -381,6 +512,7 @@ float nwdistance( float ** D, int L1, int L2, int * idx_1_aln, int * idx_2_aln, 
         		}
         i = li;
         j = lj;
+        sim = lmax;
     }
     cerr << i << " " << j << endl;
 
@@ -409,43 +541,16 @@ float nwdistance( float ** D, int L1, int L2, int * idx_1_aln, int * idx_2_aln, 
     reverse( idx_1_aln, L1_aln );
     reverse( idx_2_aln, L2_aln );
 
-    if( prm )
-    {
-            cout << "\nDynamic programming matrix: " << endl;
-            float* tempidx_1 = new float[L1+1];
-            float* tempidx_2 = new float[L2+1];
-            for( int k = 0; k <= L1; k++ ) tempidx_1[ k ] = (float) k;
-            for( int k = 0; k <= L2; k++ ) tempidx_2[ k ] = (float) k;
-            cout << "    ";
-            for( i = 0; i <= L1; i++ ) cout << tempidx_1[ i ] << "   ";
-            cout << endl;
-            for( j = 0; j <= L2; j++ )
-            {
-                    cout << tempidx_2[ j ] << " ";
-                    for( i = 0; i <= L1; i++ )
-                    {
-                            cout.width( 3 );
-                            cout << F[ j ][ i ] << " ";
-                    }
-                    cout << endl;
-            }
-            cout << endl;
-
-            cout << "  ";
-            for( i = 0; i <= L1; i++ ) cout << tempidx_1[ i ] << " ";
-            cout << endl;
-            for( j = 0; j <= L2; j++ )
-            {
-                    cout << tempidx_2[ j ] << " ";
-                    for( int i = 0; i <= L1; i++ )
-                    {
-                            cout << traceback[ j ][ i ] << " ";
-                    }
-                    cout << endl;
-            }
-
-            free(tempidx_1);
-            free(tempidx_2);
+    if( prm ) {
+        cout << "\nDynamic programming matrix: " << endl;
+        float* tempidx_1 = new float[L1+1];
+        float* tempidx_2 = new float[L2+1];
+        for( int k = 0; k <= L1; k++ ) tempidx_1[ k ] = (float) k;
+        for( int k = 0; k <= L2; k++ ) tempidx_2[ k ] = (float) k;
+    	print_matrixdp( F, tempidx_1, L1, tempidx_2, L2);
+    	print_matrixdp( traceback, tempidx_1, L1, tempidx_2, L2);
+        free(tempidx_1);
+        free(tempidx_2);
     }
 
     /* free memory */
@@ -454,7 +559,185 @@ float nwdistance( float ** D, int L1, int L2, int * idx_1_aln, int * idx_2_aln, 
     for( int j = 0; j <= L2; j++ )  delete traceback[ j ];
     delete[] traceback;
 
-    return distance;
+    return sim;
+}
+
+
+float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * idx_2_aln, int & L1_aln, int & L2_aln, int precision, bool global, bool prm)
+{
+    int i = 0, j = 0;
+    float sim;
+
+    // opening gap penalty
+    float gapopen = alpha + beta;
+
+    /* Dynamic programming matrix */
+    float ** F = new float * [ L2+1 ];
+    for( j = 0; j <= L2; j++ )
+    	F[ j ] = new float [ L1+1 ];
+    nwdp_initF_affinegaps( F, L1, L2 );
+
+    // Initialize Q and P matrices for cost of alignments that end with a gap
+    float ** Q = new float * [ L2 + 1  ];
+    for( int j = 0; j <= L2; j++ )
+    	Q[ j ] = new float [ L1 + 1 ];
+    nwdp_initGap( Q, L1, L2 );
+    float ** P = new float * [ L2 + 1  ];
+    for( int j = 0; j <= L2; j++ )
+      	P[ j ] = new float [ L1 + 1 ];
+   	nwdp_initGap( P, L1, L2 );
+
+    /* Traceback matrices */
+    char ** trF = new char * [ L2+1 ];
+    for( j = 0; j <= L2; j++ )
+    	trF[ j ] = new char [ L1+1 ];
+    nwdp_initTB( trF, L1, L2 );
+    char ** trQ = new char * [ L2+1 ];
+    for( j = 0; j <= L2; j++ )
+    	trQ[ j ] = new char [ L1+1 ];
+    nwdp_initTB( trQ, L1, L2 );
+    char ** trP = new char * [ L2+1 ];
+    for( j = 0; j <= L2; j++ )
+    	trP[ j ] = new char [ L1+1 ];
+    nwdp_initTB( trP, L1, L2 );
+
+    // base pair similarity of bases pairing with nuc_1 and bases pairing with nuc_2
+    /* create alignment */
+    char ptr;
+    for( j = 1; j <= L2; j++ )
+    {
+    	for( i = 1; i <= L1; i++ )
+        {
+    	    // calculate P
+    		P[ j ][ i ] = max3( P[ j-1 ][ i ] + beta, F[ j-1 ][ i ] + gapopen, 0, &ptr );
+            trP[ j ][ i ] =  ptr;
+
+    		// calculate Q
+    		Q[ j ][ i ] = max3( 0, F[ j ][ i-1 ] + gapopen, Q[ j ][ i-1 ] + beta, &ptr );
+            trQ[ j ][ i ] =  ptr;
+
+            // calculate F
+            F[ j ][ i ] = max( max3( P[ j ][ i ], F[ j-1 ][ i-1 ] + Z[ j-1 ][ i-1 ], Q[ j ][ i ], &ptr ), 0 );
+            trF[ j ][ i ] =  ptr;
+        }
+    }
+    sim = F[ L2 ][ L1 ];
+    i--; j--;
+
+    /* find maximal entry of similarity in matrix F, P or Q for local alignments */
+    int maxmat = 0;  // 0 .. F; 1 .. P; 2 .. Q
+    if( !global ) {
+    	float lmax = 0;
+    	int li = 0;
+    	int lj = 0;
+        for( j = 1; j <= L2; j++ )
+        	for( i = 1; i <= L1; i++ ) {
+        		if( F[ j ][ i ] >= lmax ) {
+        			lmax = F[ j ][ i ];
+        			li = i;
+        			lj = j;
+        			maxmat = 0;
+        		}
+        		if( P[ j ][ i ] >= lmax ) {
+        			lmax = P[ j ][ i ];
+        			li = i;
+        			lj = j;
+        			maxmat = 1;
+        		}
+        		if( Q[ j ][ i ] >= lmax ) {
+        			lmax = Q[ j ][ i ];
+        			li = i;
+        			lj = j;
+        			maxmat = 2;
+        		}
+        	}
+        i = li;
+        j = lj;
+        sim = lmax;
+    }
+    cerr << i << " " << j << " " << maxmat << endl;
+
+    /* backtracking */
+    int k = 0;
+    while( i > 0 || j > 0 )
+    {
+    	if( !global )
+    		if( (maxmat == 0 && F[ j ][ i ] == 0) || (maxmat == 1 && P[ j ][ i ] == 0) || (maxmat == 2 && Q[ j ][ i ] == 0) )
+    			break;
+
+    	switch( maxmat )
+    	{
+    		case 0 : switch( trF[ j ][ i ] )
+    				 {
+        			 	 case '|' : maxmat = 1;
+        			 	 	 	 	break;
+        			 	 case '\\': idx_1_aln[ k ] = i-1;
+        			 	 	 	 	idx_2_aln[ k++ ] = j-1;
+        			 	 	 	 	i--; j--;
+        			 	 	 	 	break ;
+        			 	 case '-' : maxmat = 2;
+        			 	 	 	 	break;
+    				 }
+    				 break;
+    		 case 1: switch( trP[ j ][ i ] )
+    				 {
+    		 	 	 	 case '|' : j--;
+    		 	 	 	 	 	 	break;
+    		 	 	 	 case '\\': maxmat = 0;
+    		 	 	 	 	 	 	j--;
+    		 	 	 	 	 	 	break;
+    				 }
+    				 break;
+    		 case 2: switch( trQ[ j ][ i ] )
+    		 	 	 {
+ 	 	 	 	 	 	 case '\\': maxmat = 0;
+ 	 	 	 	 	 	 	 	 	i--;
+ 	 	 	 	 	 	 	 	 	break;
+ 	 	 	 	 	 	 case '-' : i--;
+ 	 	 	 	 	 	 	 	 	break;
+    		 	 	 }
+    		 	 	 break;
+    	}
+    }
+
+    L1_aln = L2_aln = k;
+    reverse( idx_1_aln, L1_aln );
+    reverse( idx_2_aln, L2_aln );
+
+    if( prm ) {
+        cout << "\nDynamic programming matrix: " << endl;
+        float* tempidx_1 = new float[L1+1];
+        float* tempidx_2 = new float[L2+1];
+        for( int k = 0; k <= L1; k++ ) tempidx_1[ k ] = (float) k;
+        for( int k = 0; k <= L2; k++ ) tempidx_2[ k ] = (float) k;
+        cout << "F:" << endl;
+    	print_matrixdp( F, tempidx_1, L1, tempidx_2, L2);
+    	print_matrixdp( trF, tempidx_1, L1, tempidx_2, L2);
+        cout << "P:" << endl;
+    	print_matrixdp( P, tempidx_1, L1, tempidx_2, L2);
+    	print_matrixdp( trP, tempidx_1, L1, tempidx_2, L2);
+        cout << "Q:" << endl;
+    	print_matrixdp( Q, tempidx_1, L1, tempidx_2, L2);
+    	print_matrixdp( trQ, tempidx_1, L1, tempidx_2, L2);
+        free(tempidx_1);
+        free(tempidx_2);
+    }
+
+    /* free memory */
+    for( int j = 0; j <= L2; j++ )  delete F[ j ];
+    delete[] F;
+    for( int j = 0; j <= L2; j++ )  delete P[ j ];
+    delete[] P;
+    for( int j = 0; j <= L2; j++ )  delete Q[ j ];
+    delete[] Q;
+    for( int j = 0; j <= L2; j++ )  delete trF[ j ];
+    delete[] trF;
+    for( int j = 0; j <= L2; j++ )  delete trP[ j ];
+    delete[] trP;
+    for( int j = 0; j <= L2; j++ )  delete trQ[ j ];
+    delete[] trQ;
+
+ 	return sim;
 }
 
 

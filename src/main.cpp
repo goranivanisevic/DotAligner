@@ -22,6 +22,7 @@ using namespace std;
 //RNA base statistics from Knudsen et al (1999) Bioinformatics, 15 (6), 446-454.
 //unpaired probabilities    A         U         G         C
 float pnullSgl[4] = {0.364097, 0.273013, 0.211881, 0.151009};
+float maxpnullSgl = pnullSgl[0];
 
 //unpaired rate matrix    A       U       G       C
 float psubSgl[16] = {-0.749,  0.263,  0.322,  0.164,
@@ -34,6 +35,7 @@ float pnullDbl[16] = {0.001167, 0.177977, 0.001058, 0.001806,
 					  0.177977, 0.002793, 0.049043, 0.000763,
 					  0.001058, 0.049043, 0.000406, 0.266974,
 					  0.001806, 0.000763, 0.266974, 0.000391};
+float maxpnullDbl = pnullDbl[11];
 
 //paired rate matrix      AA      AU      AG      AC      UA      UU      UG      UC      GA      GU      GG      GC      CA      CU      CG      CC
 float psubDbl[256] = {-3.607,  0.617,  0.589,  0.420,  0.617,  0.000,  0.026,  0.019,  0.589,  0.026,  0.000,  0.132,  0.420,  0.019,  0.132,  0.000,
@@ -57,10 +59,11 @@ float psubDbl[256] = {-3.607,  0.617,  0.589,  0.420,  0.617,  0.000,  0.026,  0
 map<const char, const int> nucIdx = { {'A', 0}, {'U', 1}, {'G', 2}, {'C', 3} };
 
 // global arguments
-float gappenalty = -4;
-float alpha = 1;
-float extgaps = 0.5 * gappenalty;
-float stemgaps = 2 * gappenalty;
+float kappa = 0.5;
+float alpha = -1;
+float beta  = -0.1;
+
+float INFINITE = -1000;
 
 
 int  main( int argc, char ** argv )
@@ -70,11 +73,14 @@ int  main( int argc, char ** argv )
         vector<float> probDbl_2;
         vector<float> probSgl_1;
         vector<float> probSgl_2;
-       int len_1 = 0, len_2 = 0, len_1_aln = 0, len_2_aln = 0, len_1_last = 0, len_2_last = 0;
+        int len_1 = 0, len_2 = 0, len_1_aln = 0, len_2_aln = 0, len_1_last = 0, len_2_last = 0;
         string name1, name2, seq_1, seq_2;
         int precision = 2;
         int iter = -1;
         float similarity = 0.;
+        int maxshift = INFINITE;
+        int seednr = 3;
+        int seedlen = 5;
 
         /* arguments */
         string  filename1, filename2;
@@ -96,11 +102,13 @@ int  main( int argc, char ** argv )
     			{"logodds", no_argument, &setlogodds_flag, 1},	// replace probabilities by expectation normalized log odds
     			{"global2", no_argument, &setglobal2_flag, 1},  // global alignment in step 2 (default is local alignment in step 2)
     			{"dotplot", required_argument, 0, 'd'},			// input dotplots
-    			{"alpha", required_argument, 0, 'a'},			// weight of sequence similarity
-    			{"gaps", required_argument, 0, 'g'},			// gap costs
-    			{"extgaps", required_argument, 0, 'e'},			// affine gap costs to differentiate between opening and extending gaps
-    			{"stemgaps", required_argument, 0, 's'},	    // higher gap costs in base pair stacks of average probability greater than <NR>
-    			{"precision", required_argument, 0, 'p'},         // number of digits considered of base pair reliabilities
+    			{"kappa", required_argument, 0, 'k'},			// weight of sequence similarity
+    			{"alpha", required_argument, 0, 'a'},		 	// affine gap costs = alpha + k * beta (k gaps)
+    			{"beta", required_argument, 0, 'b'},			// affine gap costs = alpha + k * beta (k gaps)
+    			{"precision", required_argument, 0, 'p'},       // number of digits considered of base pair reliabilities
+    			{"maxshift", required_argument, 0, 'm'},		// maximal shift of two input sequences in the final alignment (default 50% of longer sequence)
+    			{"seednr", required_argument, 0, 's'},			// number of seed alignments (default 3)
+    			{"seedlen", required_argument, 0, 'l'},			// length of seed alignments (default 5 nucleotides)
     			{"help", no_argument, &help_flag, 1},
 
     			{0, 0, 0, 0}
@@ -113,7 +121,7 @@ int  main( int argc, char ** argv )
     		/* getopt_long stores the option index here. */
     		int option_index = 0;
 
-    		int cmd = getopt_long(argc, argv, "d:a:g:e:s:p:", long_options, &option_index);
+    		int cmd = getopt_long(argc, argv, "d:k:a:b:p:m:s:l:", long_options, &option_index);
 
     		/* Detect the end of the options. */
     		if (cmd == -1)
@@ -129,11 +137,13 @@ int  main( int argc, char ** argv )
     			          else
     			        	  usage_dotaligner(program);
     			          break;
+    			case 'k': kappa = atof(optarg); break;
     			case 'a': alpha = atof(optarg); break;
-    			case 'g': gappenalty = atof(optarg); break;
-    			case 'e': extgaps = atof(optarg); break;
-    			case 's': stemgaps = atof(optarg); break;
+    			case 'b': beta = atof(optarg); break;
     			case 'p': precision = atoi(optarg); break;
+    			case 'm': maxshift = atoi(optarg); break;
+    			case 's': seednr = atoi(optarg); break;
+    			case 'l': seedlen = atoi(optarg); break;
     			default:  abort();
     			/* no break */
     		}
@@ -188,6 +198,10 @@ int  main( int argc, char ** argv )
             return 0;
         }
 
+        /* maximal sequence shift in alignment is by default 50% of longer sequence */
+        if( maxshift == INFINITE )
+        	maxshift = abs(max(len_1, len_2) / 2);
+
         /* get unpaired probabilities */
         getunpaired(probDbl_1, len_1, probSgl_1);
         getunpaired(probDbl_2, len_2, probSgl_2);
@@ -198,7 +212,7 @@ int  main( int argc, char ** argv )
         reducematrix(probSgl_1, len_1, precision);
         reducematrix(probSgl_2, len_2, precision);
 
-       /* initialize arrays of indices */
+        /* initialize arrays of indices */
 		int *idx_1_aln = new int[len_1];
 		for( int i=0; i<len_1; i++ ) idx_1_aln[ i ] = i;
 		int *idx_2_aln = new int[len_2];
@@ -219,10 +233,19 @@ int  main( int argc, char ** argv )
 				sim[j] = new float[ len_1_last ];
 			for( int j=0; j<len_2_last; j++ )
 				for( int i=0; i<len_1_last; i++ )
-					sim[ j ][ i ] = 0.;
-			for( int j=0; j<len_2_last; j++)
-				for( int i=0; i<len_1_last; i++)
-					sim[ j ][ i ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[i], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[j], idx_2_aln, len_2_last, setprintmatrix_flag );
+					sim[ j ][ i ] = INFINITE;
+
+			int k, l;
+			int count=0;
+			int *max = ( len_2_last > len_1_last ) ? &l : &k;
+			int *min = ( len_2_last <= len_1_last ) ? &l : &k;
+			for( l=0; l<len_2_last; l++)
+				for( k = 0; k<len_1_last; k++)
+					if( *min + maxshift >= *max && *min - maxshift <= *max ) {
+						sim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[k], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[l], idx_2_aln, len_2_last, setprintmatrix_flag );
+						count++;
+					}
+			cerr << "ENDNWDP " << maxshift << " " << count << endl;
 
 			if( setprintmatrix_flag )
 			{
@@ -237,7 +260,7 @@ int  main( int argc, char ** argv )
 			/* find best local path through similarity matrix */
 			int *tmp_idx_1_aln = new int[len_1_last];
 			int *tmp_idx_2_aln = new int[len_2_last];
-			similarity += nwdistance( sim, len_1_last, len_2_last, tmp_idx_1_aln, tmp_idx_2_aln, len_1_aln, len_2_aln, precision, setglobal2_flag, setprintmatrix_flag);
+			similarity += simalign_affinegaps( sim, len_1_last, len_2_last, tmp_idx_1_aln, tmp_idx_2_aln, len_1_aln, len_2_aln, precision, setglobal2_flag, setprintmatrix_flag);
 			for( int i=0; i<len_1_aln; i++ ) idx_1_aln[ i ] = idx_1_aln[ tmp_idx_1_aln[ i ] ];
 			for( int i=0; i<len_2_aln; i++ ) idx_2_aln[ i ] = idx_2_aln[ tmp_idx_2_aln[ i ] ];
 			free(tmp_idx_1_aln);
@@ -270,8 +293,23 @@ int  main( int argc, char ** argv )
         similarity = 0;
         for( int i=0; i<len_1_aln; i++ )
         	similarity += nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[i], idx_1_aln, len_1_aln, seq_2, probDbl_2, probSgl_2, idx_2_aln[i], idx_2_aln, len_2_aln, setprintmatrix_flag );
-        //similarity = similarity / len_1_aln + gappenalty * ( (float) max(len_1, len_2) - len_1_aln ) / ( (float) max(len_1, len_2) );
-        similarity = ( similarity + gappenalty * ( len_1 + len_2 - len_1_aln - len_1_aln ) ) / len_1_aln;
+        int open = 0, extended = 0, gaplen;
+		for( int i=1; i<len_1_aln; i++ ) {
+			gaplen = idx_1_aln[ i ] - idx_1_aln[ i-1 ] - 1;
+			if( gaplen ) {
+				open++;
+				extended += gaplen;
+			}
+		}
+		for( int j=1; j<len_2_aln; j++ ) {
+			gaplen = idx_2_aln[ j ] - idx_2_aln[ j-1 ] - 1;
+			if( gaplen ) {
+				open++;
+				extended += gaplen;
+			}
+		}
+	    //similarity = ( len_1_aln ) ? ( similarity + alpha * ( len_1 + len_2 - len_1_aln - len_1_aln ) ) / len_1_aln : 0;
+		similarity = ( len_1_aln ) ? ( similarity + alpha * open + beta * extended ) / ( len_1_aln + extended ) : 0;
 
         /* print aligned probabilities and similarity */
         iter = ( !iter ) ? 1 : iter;
@@ -286,6 +324,10 @@ int  main( int argc, char ** argv )
 		/* free memory */
         delete[] idx_1_aln;
         delete[] idx_2_aln;
+        probDbl_1.clear();
+        probDbl_2.clear();
+        probSgl_1.clear();
+        probSgl_2.clear();
 
         return  0;
 }

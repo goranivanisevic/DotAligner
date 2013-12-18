@@ -155,8 +155,9 @@ arc-annotated sequences $(S_a,P_a)$ and $(S_b,P_b)$ is defined by
 where $S$ is a sequence and $P$ is a base pairing probability matrix,
 $\sigma(i,i^\prime)$ is the similarity of sequence positions $S_a[i]$ and
 $S_b[i^\prime]$, $\tau(i,j,i^\prime,j^\prime)$ is the similarity of arcs $(i,j)
-\in P_a$ and $(i^\prime,j^\prime) \in P_b$ ($\tau(i,j,i^\prime,j^\prime) = 1 -
-2 \times | P_a(i,j)-P_b(i^\prime,j^\prime) |$), and $\gamma$ is the gap cost
+\in P_a$ and $(i^\prime,j^\prime) \in P_b$,
+%$\tau(i,j,i^\prime,j^\prime) = 1 - 2 \times | P_a(i,j)-P_b(i^\prime,j^\prime) |$)
+and $\gamma$ is the gap cost
 associated with each sequence position that is not matched ($L =
 |S_a|+|S_b|-2|A|$). The alignment problem finds the maximal $Z(A)$. As its
 solution is MAX-SNP-hard we implemented a heuristic of the alignment problem in
@@ -178,9 +179,9 @@ solution is MAX-SNP-hard we implemented a heuristic of the alignment problem in
 \vspace{-15px}
 \begin{equation}\label{eq2}
 \begin{array}{rl}
-	Z(A|i,i^\prime) = & \alpha \times \sigma(i,i^\prime) + \\
-%	& \beta \times \sum_{k=1}^N \sum_{l=1}^M \tau(i,k,i^\prime,l) + \\
-	& \beta \times \sum_{(i,j) \in P_a,\atop {(i^\prime,j^\prime) \in P_b,\atop {(j,j^\prime) \in A}}} \tau(i,j,i^\prime,j^\prime) + \\
+Z(A|i,i^\prime) = & \kappa \times \sigma(i,i^\prime) + \\
+%	\sum_{k=1}^N \sum_{l=1}^M \tau(i,k,i^\prime,l) + \\
+		& \frac{1-\kappa}{min(N,M)} \sum_{(i,j) \in P_a,\atop {(i^\prime,j^\prime) \in P_b,\atop {(j,j^\prime) \in A}}} \tau(i,j,i^\prime,j^\prime) + \\
 	& \gamma \times L
 %NW[P_a(x_{i1} \ldots x_{iN}),P_b(y_{j1} \ldots y_{jM})]
 \end{array}
@@ -205,8 +206,8 @@ H_{ij} = max \begin{cases}
 \ENDFOR
 \ENDFOR
 \STATE $A(S_a,S_b) = BACKTRACKING(H)$
-\STATE Remove gaps in $A(S_a,S_b)$ from $(S_a,P_a)$ and $(S_b,P_b)$ 
-\UNTIL gaps in $A(S_a,S_b) == 0$
+\STATE Remove bases in $(S_a,P_a)$ and $(S_b,P_b)$ that align to gaps in $A(S_a,S_b)$ 
+\UNTIL gaps $\notin A(S_a,S_b)$
 %\end{courier}
 \end{algorithmic}
 \end{algorithm}
@@ -215,48 +216,56 @@ H_{ij} = max \begin{cases}
 In step 1 we calculate weights $Z(A|i,i^\prime)$ as defined in equation
 \ref{eq2} for all combinations of fixed positions $i$ in sequence $S_a$ and
 $i^\prime$ in sequence $S_b$.  The only difference between equations \ref{eq2}
-and \ref{eq1} is the fixation of $i$ and $i^\prime$, and the introduction of the
-weighting parameters for sequence conservation ($\alpha$) and for structure
-conservation ($\beta$, normally set to 1) which will be needed later.  Thus, we
-globally align two vectors of probabilities instead of two matrices which can be
-done by the Needleman-Wunsch algorithm. The actual alignments aren't needed any
-longer.  In step 2 we locally align the weights $Z(A|i,i^\prime)$ from step 1 by
-Smith-Waterman algorithm, see equation \ref{eq3}, where the weights
-$Z(A|i,i^\prime)$ are used as the matching scores.  Both steps are repeated
-until no more gaps are introduced in step 2, thus, the same nucleotides in $S_a$
-and $S_b$ are aligned in the last two iterations. Then the final dissimilarity
-of the two dotplots is calculated by
+and \ref{eq1} is the fixation of $i$ and $i^\prime$, and the introduction of
+parameter $\kappa$ setting the impact of sequence conservation. Thus, we
+globally align two vectors of probabilities instead of two matrices which can
+be done by the Needleman-Wunsch algorithm. The actual alignments aren't needed
+in step 2, instead the two sequences are locally aligned by using the weights
+$Z(A|i,i^\prime)$ from step 1 as similarity scores, see equation \ref{eq3}. This
+can be done by the Smith-Waterman algorithm.  Both steps are repeated until no
+more gaps are introduced in step 2, thus, the same nucleotides in $S_a$ and
+$S_b$ are aligned in the last two iterations.  Then the final similarity of
+the two dotplots is calculated by
 
 \begin{equation}\label{eq4}
 \arraycolsep=1.4pt
 \begin{array}{rl}
-	dist = & 1 - Z(A) \\
-	     = & 1 - \frac{1}{|A|} \left( \sum_{(i,i^\prime) \in A} Z(A|i,i^\prime,\gamma=0) + \gamma \times L \right)
+Z(A) = & \frac{1}{|A|} \left( \sum_{(i,i^\prime) \in A,\atop {i=\neg gap, i^\prime=\neg gap}} Z(A|i,i^\prime) + \gamma \times L \right)
 \end{array}
 \end{equation}
 
-where $Z(A|i,i^\prime,\gamma=0)$ is equal to equation \ref{eq2} without the gap
-term, and $L = |S_a|+|S_b|-2|A|$.
+where $Z(A|i,i^\prime)$ is equal to equation \ref{eq2} without the term for
+gaps, $|A|$ is the length of the local alignment and $L = |S_a|+|S_b|-2|A|$.
 
-The robustness of the alignments can be improved by applying log-odds scores of
+The robustness of the alignment is improved by applying log-odds scores of
 having a specific base pairing against the null model of a random pairing
-\cite{Will17432929}.  Here, we replace $P(i,i^\prime)$ with 
+\cite{Will17432929}.  Here, we replace $P(i,j)$ with 
 
 \begin{equation}
-	\Psi_{i,i^\prime} = log \frac{P(i,i^\prime)}{p_0(i,i^\prime)} / log
-	\frac{1}{p_0(i,i^\prime)} 
+	\Psi_{i,j} = log \frac{P(i,j)}{p_0(i,j)} / log \frac{1}{p_0(i,j)} 
 \end{equation}
 
-where $p_0(i,i^\prime)$ is the expected probability for a pairing to occur at
-random (use ribosomal paired probability matrix
-\cite{Knudsen:Hein:RNA_secon_struc:1999}). The term $log
-\frac{1}{p_0(i,i^\prime)}$ is a normalization factor that transforms the scores
-to a maximum of 1. $P==1$ results in $\Psi=1$, $P>p_0$ results in $\Psi>0$,
-$P==p_0$ results in $\Psi=0$, and $P<p_0$ results in $\Psi<0$. This
-transformation gives larger dissimilarities if low basepair probabilities are
-involved, but relatively lower dissimilarities if two high basepair
-probabilities are compared. Unpaired probabilities can be transformed in a
-similar fashion by
+where $p_0(i,j)$ is the expected probability for a pairing to occur at random
+(use ribosomal paired probability matrix
+\cite{Knudsen:Hein:RNA_secon_struc:1999}). The term $log \frac{1}{p_0(i,j)}$ is
+a normalization factor that transforms the scores to a maximum of 1. $P==1$
+results in $\Psi=1$, $P>p_0$ results in $\Psi>0$, $P==p_0$ results in $\Psi=0$,
+and $P<p_0$ results in $\Psi^*\le\Psi<0$ where $\Psi^*$ is a lower boundary.
+This transformation gives weaker similarities if low basepair probabilities are
+compared, but stronger similarities for high basepair probabilities. The
+similarity $\tau$ is then calculate by
+
+\begin{equation}
+	\tau(i,j,i^\prime,j^\prime) = \left\{ \begin{array}{cl}
+			1 - \delta(i,j,i^\prime,j^\prime) & \textrm{if }\delta(i,j,i^\prime,j^\prime) < 1 \\
+			0 & \textrm{else}
+		\end{array}\right.
+\end{equation}
+
+where $\delta(i,j,i^\prime,j^\prime) = | \Psi(i,j) - \Psi(i^\prime,j^\prime) |$
+so that $\tau = (0,1)$. 
+
+Unpaired probabilities are handled in a similar way by
 
 \begin{equation}
 	\omega(i) = log \frac{1 - \sum_k P(i,k)}{p_0(i)} / log \frac{1}{p_0(i)}
@@ -265,29 +274,67 @@ similar fashion by
 where $p_0(i)$ is the expected probability for an unpaired base to occur at
 random (use ribosomal unpaired probabilities
 \cite{Knudsen:Hein:RNA_secon_struc:1999}). Our model is based on structure
-similarity, however, the sequence similarity $\sigma$ may be important in
-unpaired regions, \eg{} hairpin loops. Therefore, we weight matching nucleotides
-by the similarity of their unpaired probabilities:
+similarity, however, the sequence similarity $\sigma$ may be especially
+important in unpaired regions, \eg{} as accessible sequence-specific binding
+motif.  Therefore, we weight matching nucleotides by the similarity of their
+unpaired probabilities:
 
 \begin{equation}
 	\sigma(i,i^\prime) = \left\{ \begin{array}{cl}
-			1 - 2 \times | \omega(i) - \omega(i^\prime) | & \textrm{if }i == i^\prime \\
+			1 - \delta(i,i^\prime) & \textrm{if }i == i^\prime \textrm{ and } \delta(i,i^\prime) < 1 \\
 			0 & \textrm{else}
 		\end{array}\right.
 \end{equation}
 
-\noindent By doing so, sequence similarity gets highest weight if the base in both
-sequences is likely to be unpaired.
+where $\delta(i,i^\prime) = | \omega(i) - \omega(i^\prime) |$ so that $\sigma = (0,1)$.  By
+doing so, sequence similarity gets highest weight if the base in both sequences
+is likely to be unpaired.
 
 Finally, the proposed algorithm can be optimized by different parameters which
 will be evaluated in the result section:
 
 \begin{enumerate}
-\item weight of sequence similarity (optimize $\alpha$)
-\item gap costs (optimize $\gamma$)
-\item affine gap costs to differentiate between opening and extending gaps. This term is especially important for the global alignment in step 1 where we want to prefer long gaps when sequences of different lengths are aligned.
-\item higher gap costs in highly probable basepair stacks
+\item weight of sequence similarity (optimize $\kappa$)
+\item replace $\gamma \times L$ with affine gap costs $l \times \alpha + k
+\times \beta$ where $l$ is number of initiation gaps and $k$ is the number of
+all gaps (optimize $\alpha$ and $\beta$)
 \end{enumerate}
+
+
+\subsection{Speed up}
+
+To achieve a very fast method that can be applied on a large amount of pairwise
+comparisons, \eg{} a set of 2,000 RNA sequences requires $2 \times 10^6$
+comparisons, we implemented two complementary strategies:
+\begin{enumerate}
+\item set maximal allowed shift of two input sequences in the final alignment
+\item random seed alignments
+\end{enumerate}
+The first strategy reduces the amount of comparisons in step 1 by ignoring pairs
+of distant nucleotides which will normally never align. This restriction will
+always find the best global alignment but may miss local alignments of long
+input sequences if the maximal shift is set to small. The second strategy
+randomly selects short seed sequences (5 nucleotides) in sequence 1 and aligns
+them to sequence 2. As soon as the first seed alignment has a gap-free alignment
+above a given threshold then the entire sequences are aligned around the already
+calculated similarities. If all seed alignments fail the program is stopped and
+a similarity of 0 is returned.
+
+
+\subsection{Local alignments}
+
+The so far presented approach finds only semi-local alignments, meaning the
+heuristic in the first step of the algorithm gives global alignments, whereas
+the second step provides a final local alignment. This strategy is applicable
+for input sequences of similar lengths, however, a real local alignment is
+necessary if input sequences are very long or have different lengths. Finding
+the optimal local alignment common to all pairs of pairing probabilities in step
+1 is again NP-hard, why we apply another heuristic. In step 1 we find the
+optimal local alignment for each pair of pairing probabilities that includes the
+two reference bases. Then for each optimal local alignment we run for its two
+subsequences step 1 with global alignments, and after that step 2 on the
+distances of the two subsequences. This results in a number of local alignments
+that can be sorted by their similarity.
 
 
 \section{\uppercase{Results}}
@@ -303,7 +350,7 @@ where TP is the number of correctly predicted positives, FP is the number of
 incorrectly predicted positives, TN is the number of correctly predicted
 negatives, and FN is the number of incorrectly predicted negatives.
 Furthermore, the area under the receiver operating characteristic (ROC) curve
-was used to optimize $\alpha$, $\gamma$, and affine gap costs. The ROC curve
+was used to optimize $\kappa$, $\alpha$, and $\beta$. The ROC curve
 plots the true positive rates (SN) as a function of the false positive rates (1
 - SP) for varying parameters.
 
@@ -458,10 +505,10 @@ The pipeline may comprise window based thermodynamic folding, \eg{} by
 \rnaplfold{} \cite{Bernhart:Hofacker:Stadler:Local_RNA_base:2006}, the
 identification of regions of high intra-molecular binding probabilities, \eg{}
 \rnalocal{} \cite{Dotu19908358}, followed by the presented alignment tool
-\dotaligner. The identification of local structural potential is necessary because
-\dotaligner{} finds only semi-local alignments, meaning the heuristic in the first
-step of the algorithm gives global alignment, whereas the second step provides a
-final local alignment. 
+\dotaligner. The pre-selection of local structural potential is necessary
+because \dotaligner{} finds only semi-local alignments, meaning the heuristic in
+the first step of the algorithm gives global alignment, whereas the second step
+provides a final local alignment. 
 
 \dotaligner{} can also be extended for multiple alignments, similar to the strategy
 implemented in \pmmulti{} \cite{Hofacker15073017}, and the generation of
