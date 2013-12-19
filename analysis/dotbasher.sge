@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# SGE submission options  
+#$ -cwd                       	# Change to current working directory (change as needed)
+#$ -V                         	# Export environment variables into script (change as needed)
+#$ -S /bin/bash			# Enforce bash (don't touch!!!!)
+#$ -pe smp 1			# Single CPU per qsub submission
+#$ -N DOTALIGN			# Job name
+#$ -o DOTALIGN.out		# stdout
+#$ -e DOTALIGN.err		# stderr
+
+# Path to folder containing input files 
+INPUTDATA=~/data/bed/
+
+# Count input files
+STRUCTURES=`ls ${INPUTDATA} | wc -l | sed 's/ //g'`
+echo $STRUCTURES
+
+PLOT1=`ls ${INPUTDATA} | head -n ${SGE_TASK_ID} | tail -n 1`
+echo "[ NOTE ] Performing "$(($STRUCTURES - $SGE_TASK_ID ))" pairwise comparisons for input "$PLOT1
+
+for DOTPLOT in $( seq $SGE_TASK_ID $STRUCTURES) ; do
+  if [[ $DOTPLOT -ne $SGE_TASK_ID ]]; then
+  	PLOT2=$( ls ${INPUTDATA} | head -n ${DOTPLOT} | tail -n 1 )
+  	#### The output is written to a flatfile for each individual dotplot, 
+  	####  to be merged upon completion.
+  	# DotAligner $PLOT1 $PLOT2 >> $PLOT1.out
+  	echo $PLOT1 $PLOT2 
+  fi
+done
+echo "[ NOTE ] Completed pairwise comparisons for "$PLOT1
