@@ -14,8 +14,9 @@
 
 #include "nwdp.h"
 #include <getopt.h>
-#include <vector>
 #include <map>
+#include <ctime>
+#include <cstdlib>
 
 using namespace std;
 
@@ -66,7 +67,7 @@ float beta  = -0.1;
 float INFINITE = -1000;
 
 
-int  main( int argc, char ** argv )
+int main( int argc, char ** argv )
 {
 		char * program = *argv ;
         vector<float> probDbl_1;
@@ -77,9 +78,8 @@ int  main( int argc, char ** argv )
         string name1, name2, seq_1, seq_2;
         int precision = 2;
         int iter = -1;
-        float similarity = 0.;
         int maxshift = INFINITE;
-        int seednr = 3;
+        int seednr = 5;
         int seedlen = 5;
 
         /* arguments */
@@ -89,6 +89,7 @@ int  main( int argc, char ** argv )
         static int setprintmatrix_flag = 0;
         static int setseqalign_flag = 0;
         static int setlogodds_flag = 0;
+        static int setlocal1_flag = 0;
         static int setglobal2_flag = 0;
         static int help_flag = 0;
 
@@ -100,6 +101,7 @@ int  main( int argc, char ** argv )
     			{"printdp", no_argument, &setprintmatrix_flag, 1},	// Print matrices
     			{"seq", no_argument, &setseqalign_flag, 1},		// calculate sequence alignment
     			{"logodds", no_argument, &setlogodds_flag, 1},	// replace probabilities by expectation normalized log odds
+    			{"local1", no_argument, &setlocal1_flag, 1},	// local alignment in step 1 (default is global in step 1)
     			{"global2", no_argument, &setglobal2_flag, 1},  // global alignment in step 2 (default is local alignment in step 2)
     			{"dotplot", required_argument, 0, 'd'},			// input dotplots
     			{"kappa", required_argument, 0, 'k'},			// weight of sequence similarity
@@ -189,7 +191,7 @@ int  main( int argc, char ** argv )
             seq_2_al.reserve(2*len_2_aln);
 
             /* get sequence alignment */
-            similarity = (float) nw( seq_1, seq_2, seq_1_al, seq_2_al, setprintmatrix_flag ) ;
+            float similarity = (float) nw( seq_1, seq_2, seq_1_al, seq_2_al, setprintmatrix_flag ) ;
 
             /* print sequence alignment */
             cout << "Similarity = " << similarity << endl;
@@ -218,12 +220,9 @@ int  main( int argc, char ** argv )
 		int *idx_2_aln = new int[len_2];
 		for( int i=0; i<len_2; i++ ) idx_2_aln[ i ] = i;
 
-        /* repeat aligning until no changes in alignment */
+		/* repeat aligning until no changes in alignment */
         while( len_1_last != len_1_aln || len_2_last != len_2_aln )
         {
- 			#if DEBUG
-        		cout << len_1_last << " " << len_1_aln << " " << len_2_last << " " << len_2_aln << endl;
-			#endif
         	len_1_last = len_1_aln;
         	len_2_last = len_2_aln;
 
@@ -235,14 +234,99 @@ int  main( int argc, char ** argv )
 				for( int i=0; i<len_1_last; i++ )
 					sim[ j ][ i ] = INFINITE;
 
+			/* run seed alignments */
+			if( iter == -1 && seednr && seedlen && len_1_last > 2*seednr*seedlen && len_2_last > 2*seednr*seedlen ) {
+				// structure similarity per base in seed alignment necessary for success
+				float threshold = 0.5;
+				int *idx_seed_aln = new int[seedlen];
+				int len_seed_aln;
+				srand((unsigned)time(0));
+				int maxlen = ( len_2_last > len_1_last ) ? len_2_last : len_1_last;
+				int minlen = ( len_2_last <= len_1_last ) ? len_2_last : len_1_last;
+				float **seedsim = new float*[ maxlen ];
+				for( int j=0; j<maxlen; j++ )
+					seedsim[j] = new float[ seedlen ];
+				for( int s=0; s<seednr; s++ )
+				{
+					for( int j=0; j<maxlen; j++ )
+						for( int i=0; i<seedlen; i++ )
+							seedsim[ j ][ i ] = INFINITE;
+					cerr << "SEED ALIGNMENT NR " << s+1 << endl;
+					// get seed sequence from longer sequence
+					int seedstart = int( (float)minlen*rand()/(RAND_MAX + 1.0) );
+					//seedstart =+ int( (rand()%minlen)+1 / 2 );
+					for( int i=0; i<seedlen; i++ )
+						idx_seed_aln[ i ] = seedstart + i;
+					// run nwdp
+					float tmpkappa = kappa; kappa = 0;
+					float tmpalpha = alpha; alpha = 0;
+					float tmpbeta  = beta; beta = 0;
+					for( int l=0; l<maxlen; l++)
+						for( int k = seedstart; k<seedstart+seedlen; k++)
+							if( k + maxshift >= l && k - maxshift <= l )
+							{
+								if( len_2_last > len_1_last )
+									sim[ l ][ k ] = seedsim[ l ][ k-seedstart ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[k], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[l], idx_2_aln, len_2_last, 0 );
+								else
+									sim[ k ][ l ] = seedsim[ l ][ k-seedstart ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[l], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[k], idx_2_aln, len_2_last, 0 );
+							}
+					// run simalign_affinegaps
+					int *tmp_idx_seed_aln = new int[seedlen];
+					int *tmp_idx_max_aln = new int[maxlen];
+					beta = INFINITE;
+					float z = simalign_affinegaps( seedsim, seedlen, maxlen, tmp_idx_seed_aln, tmp_idx_max_aln, len_seed_aln, precision, 0, 0);
+					kappa = tmpkappa;
+					alpha = tmpalpha;
+					beta = tmpbeta;
+					cerr << "Z " << z << " SeedLen " << len_seed_aln << endl;
+					for( int i=0; i<len_seed_aln; i++ ) tmp_idx_seed_aln[ i ] = tmp_idx_seed_aln[ i ] + seedstart;
+					if( len_2_last > len_1_last ) {
+						for( int i=0; i<len_seed_aln; i++ ) cout << tmp_idx_seed_aln[ i ] << " " << seq_1.at(tmp_idx_seed_aln[ i ]) << "\t"; cout << endl;
+						for( int j=0; j<len_seed_aln; j++ ) cout << tmp_idx_max_aln[ j ] << " " << seq_2.at(tmp_idx_max_aln[ j ]) << "\t"; cout << endl;
+					}
+					else {
+						for( int i=0; i<len_seed_aln; i++ ) cout << tmp_idx_seed_aln[ i ] << " " << seq_2.at(tmp_idx_seed_aln[ i ]) << "\t"; cout << endl;
+						for( int j=0; j<len_seed_aln; j++ ) cout << tmp_idx_max_aln[ j ] << " " << seq_1.at(tmp_idx_max_aln[ j ]) << "\t"; cout << endl;
+					}
+					free(tmp_idx_seed_aln);
+					int targetlen = tmp_idx_max_aln[ len_seed_aln-1 ] - tmp_idx_max_aln[ 0 ] + 1;
+					free(tmp_idx_max_aln);
+
+					// break if sim >= threshold and gapnr == 0 and alignlength == seedlength
+					cerr << "THRESHOLD " << threshold * seedlen << " TARGETLEN " << targetlen << endl;
+					if( len_seed_aln == seedlen && targetlen == seedlen && z >= threshold * seedlen )
+						break;
+					else
+						if( s == seednr - 1 ) {
+							// exit with similarity = 0 if sim < threshold or gapnr != 0 or alignlength != seedlength
+							cout << "Similarity = 0, Length_1 = 0, Unaligned_1 = " << len_1;
+							cout << ", Length_2 = 0, Unaligned_2 = " << len_2 << ", Iterations = " << iter << endl;
+
+							/* free memory */
+					        delete[] idx_1_aln;
+					        delete[] idx_2_aln;
+					        probDbl_1.clear();
+					        probDbl_2.clear();
+					        probSgl_1.clear();
+					        probSgl_2.clear();
+							freeMatrix(seedsim, maxlen);
+
+							return 0;
+						}
+				}
+				freeMatrix(seedsim, maxlen);
+			}
+
+			/* run all pairs of pairing probabilities */
 			int k, l;
-			int count=0;
 			int *max = ( len_2_last > len_1_last ) ? &l : &k;
 			int *min = ( len_2_last <= len_1_last ) ? &l : &k;
+			int count=0;
 			for( l=0; l<len_2_last; l++)
 				for( k = 0; k<len_1_last; k++)
 					if( *min + maxshift >= *max && *min - maxshift <= *max ) {
-						sim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[k], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[l], idx_2_aln, len_2_last, setprintmatrix_flag );
+						if( sim[ l ][ k ] == INFINITE )
+							sim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[k], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[l], idx_2_aln, len_2_last, setprintmatrix_flag );
 						count++;
 					}
 			cerr << "ENDNWDP " << maxshift << " " << count << endl;
@@ -260,14 +344,15 @@ int  main( int argc, char ** argv )
 			/* find best local path through similarity matrix */
 			int *tmp_idx_1_aln = new int[len_1_last];
 			int *tmp_idx_2_aln = new int[len_2_last];
-			similarity += simalign_affinegaps( sim, len_1_last, len_2_last, tmp_idx_1_aln, tmp_idx_2_aln, len_1_aln, len_2_aln, precision, setglobal2_flag, setprintmatrix_flag);
+			simalign_affinegaps( sim, len_1_last, len_2_last, tmp_idx_1_aln, tmp_idx_2_aln, len_1_aln, precision, setglobal2_flag, setprintmatrix_flag);
+			len_2_aln = len_1_aln;
 			for( int i=0; i<len_1_aln; i++ ) idx_1_aln[ i ] = idx_1_aln[ tmp_idx_1_aln[ i ] ];
 			for( int i=0; i<len_2_aln; i++ ) idx_2_aln[ i ] = idx_2_aln[ tmp_idx_2_aln[ i ] ];
 			free(tmp_idx_1_aln);
 			free(tmp_idx_2_aln);
 
 			#if DEBUG
-				cout << "Similarity = " << similarity << "\tGaps_1 = " << len_1-len_1_aln << "\tGaps_2 = " << len_2-len_2_aln << endl;
+				cout << "\tGaps_1 = " << len_1-len_1_aln << "\tGaps_2 = " << len_2-len_2_aln << endl;
 				for( int i=0; i<len_1_aln; i++ ) cout << idx_1_aln[ i ] << "\t";
 				cout << endl;
 				for( int j=0; j<len_2_aln; j++ ) cout << idx_2_aln[ j ] << "\t";
@@ -290,7 +375,7 @@ int  main( int argc, char ** argv )
         //has to be done
 
         /* calculate final similarity */
-        similarity = 0;
+        float similarity = 0.;
         for( int i=0; i<len_1_aln; i++ )
         	similarity += nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[i], idx_1_aln, len_1_aln, seq_2, probDbl_2, probSgl_2, idx_2_aln[i], idx_2_aln, len_2_aln, setprintmatrix_flag );
         int open = 0, extended = 0, gaplen;

@@ -98,7 +98,7 @@ For clustering of RNA domains a dissimilarity measurement of all pairs of query
 structures is needed. The dissimilarity is described through a pairwise weighted
 string alignment with arbitrary pairwise dependencies (for base pairings). The
 Needleman-Wunsch (2) algorithm solves the maximum weight string alignment
-problem by dynamic programming in $O(n^2)$ by preserving the sequence order and
+problem by dynamic programming in $O(N^2)$ by preserving the sequence order and
 maximizing the similarity. The consideration of pairs of nucleotides in each
 sequence that form intra-molecular interactions extends the problem to pairwise
 dependencies among positions in each string. This problem variant is
@@ -138,7 +138,7 @@ aligning two dotplots available by the iteration through a two step approach:
 (1) find dissimilarity (distance) of basepair probabilities of each nucleotide
 in sequence $S_a$ to each nucleotide in sequence $S_b$; and (2) find best path
 through the distance matrix generated in 1. The iteration is stopped when no
-more gaps are introduced in step 2. This algorithm runs in $O(n^2)$, hence, in
+more gaps are introduced in step 2. This algorithm runs in $O(N^2)$, hence, in
 the same time complexity as the sequence-based alignments.  In the following we
 discuss in detail how the algorithm works.
 
@@ -328,12 +328,13 @@ heuristic in the first step of the algorithm gives global alignments, whereas
 the second step provides a final local alignment. This strategy is applicable
 for input sequences of similar lengths, however, a real local alignment is
 necessary if input sequences are very long or have different lengths. Finding
-the optimal local alignment common to all pairs of pairing probabilities in step
-1 is again NP-hard, why we apply another heuristic. In step 1 we find the
-optimal local alignment for each pair of pairing probabilities that includes the
-two reference bases. Then for each optimal local alignment we run for its two
-subsequences step 1 with global alignments, and after that step 2 on the
-distances of the two subsequences. This results in a number of local alignments
+the optimal local alignment common to all pairs of pairing probabilities in
+step 1 has complexity $O(N^3)$, why we apply another heuristic that still runs
+in $O(N^2)$. In step 1 we find the optimal local alignment for each pair of
+pairing probabilities that includes the two reference bases. Then for each
+optimal local alignment we choose the aligned local sequence of $S_a$ ($LS_a$)
+and run step 1 with global alignments against $S_b$. After that we run step 2
+on the similarities of $LS_a$.  This results in a number of local alignments
 that can be sorted by their similarity.
 
 

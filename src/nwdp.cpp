@@ -23,6 +23,7 @@ void usage_dotaligner(char *program)
     cerr << "\n   Debug modes:";
 	cerr << "\n   --printdp             ... print dynamic programming matrices";
     cerr << "\n   --logodds             ... replace probabilities by expectation normalized log odds";
+    cerr << "\n   --local1              ... local alignment in step 1 (default is global in step 1)";
     cerr << "\n   --global2             ... global alignment in step 2 (default is local alignment in step 2)";
     cerr << "\n   -k --kappa <nr>       ... weight of sequence similarity (0..1; default = 0.5); 1 - kappa is weight of dotplots";
     cerr << "\n   -a --alpha <nr>       ... affine gap costs = alpha + k * beta (k gaps; alpha default = -4)";
@@ -32,7 +33,9 @@ void usage_dotaligner(char *program)
     cerr << "\n   -p --precision <nr>   ... number of digits considered of base pair reliabilities (default = 2)";
     cerr << "\n   -m --maxshift <nr>    ... maximal shift of two input sequences in the final alignment (default 50% of longer sequence)";
     cerr << "\n                             speeds up the calculation by ignoring pairwise comparisons of distant nucleotides";
-    cerr << "\n                             local alignments may be missed for long sequences if <maxshift> is set too low\n";
+    cerr << "\n                             local alignments may be missed for long sequences if <maxshift> is set too low";
+    cerr << "\n   -s --seednr <nr>      ... number of seed alignments (default = 3)";
+    cerr << "\n   -l --seedlen <nr>     ... length of seed alignments (default = 5 nucleotides)\n";
 	cerr << "\n   --help                ... this output\n";
     cerr << "\n   Output:   similarity and alignment\n\n";
 
@@ -185,7 +188,7 @@ void nwdp_initF( float ** F, int L1, int L2 )
  * initialize matrix of costs for alignment of prefixes (a_1 ... a_i; b_1 ... b_j)
  * for affine gap costs
  */
-void nwdp_initF_affinegaps( float ** F, int L1, int L2 )
+void nwdp_initF_affinegaps( float ** F, int L1, int L2, bool global )
 {
 	F[ 0 ][ 0 ] =  0. ;
 
@@ -193,10 +196,12 @@ void nwdp_initF_affinegaps( float ** F, int L1, int L2 )
 		for( int i = 1; i <= L1; i++ )
 			F[ j ][ i ] = INFINITE;
 
-    for( int i = 1; i <= L1; i++ )
-     	F[ 0 ][ i ] =  alpha + i * beta;
-    for( int j = 1; j <= L2; j++ )
-      	F[ j ][ 0 ] =  alpha + j * beta;
+	for( int i = 1; i <= L1; i++ )
+		F[ 0 ][ i ] = ( global ) ? alpha + i * beta : 0;
+		//F[ 0 ][ i ] = alpha + i * beta;
+	for( int j = 1; j <= L2; j++ )
+		F[ j ][ 0 ] = ( global ) ? alpha + j * beta : 0;
+		//F[ j ][ 0 ] = alpha + j * beta;
 }
 
 
@@ -299,7 +304,7 @@ float nwdb_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, float* p
     F = new float * [ L2 + 1  ];
     for( int j = 0; j <= L2; j++ )
     	F[ j ] = new float [ L1 + 1 ];
-    nwdp_initF_affinegaps( F, L1, L2 );
+    nwdp_initF_affinegaps( F, L1, L2, 1 );
 
     // Initialize Q and P matrices for cost of alignments that end with a gap
     Q = new float * [ L2 + 1  ];
@@ -563,7 +568,7 @@ float simalign( float ** Z, int L1, int L2, int * idx_1_aln, int * idx_2_aln, in
 }
 
 
-float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * idx_2_aln, int & L1_aln, int & L2_aln, int precision, bool global, bool prm)
+float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * idx_2_aln, int & Laln, int precision, bool global, bool prm)
 {
     int i = 0, j = 0;
     float sim;
@@ -575,7 +580,7 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
     float ** F = new float * [ L2+1 ];
     for( j = 0; j <= L2; j++ )
     	F[ j ] = new float [ L1+1 ];
-    nwdp_initF_affinegaps( F, L1, L2 );
+    nwdp_initF_affinegaps( F, L1, L2, global );
 
     // Initialize Q and P matrices for cost of alignments that end with a gap
     float ** Q = new float * [ L2 + 1  ];
@@ -609,15 +614,17 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
     	for( i = 1; i <= L1; i++ )
         {
     	    // calculate P
-    		P[ j ][ i ] = max3( P[ j-1 ][ i ] + beta, F[ j-1 ][ i ] + gapopen, 0, &ptr );
+   			P[ j ][ i ] = max3( P[ j-1 ][ i ] + beta, F[ j-1 ][ i ] + gapopen, INFINITE, &ptr );
             trP[ j ][ i ] =  ptr;
 
     		// calculate Q
-    		Q[ j ][ i ] = max3( 0, F[ j ][ i-1 ] + gapopen, Q[ j ][ i-1 ] + beta, &ptr );
+           	Q[ j ][ i ] = max3( INFINITE, F[ j ][ i-1 ] + gapopen, Q[ j ][ i-1 ] + beta, &ptr );
             trQ[ j ][ i ] =  ptr;
 
             // calculate F
-            F[ j ][ i ] = max( max3( P[ j ][ i ], F[ j-1 ][ i-1 ] + Z[ j-1 ][ i-1 ], Q[ j ][ i ], &ptr ), 0 );
+            F[ j ][ i ] = max3( P[ j ][ i ], F[ j-1 ][ i-1 ] + Z[ j-1 ][ i-1 ], Q[ j ][ i ], &ptr );
+            if( !global && F[ j ][ i ] < 0 )
+            	F[ j ][ i ] = 0;
             trF[ j ][ i ] =  ptr;
         }
     }
@@ -700,9 +707,9 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
     	}
     }
 
-    L1_aln = L2_aln = k;
-    reverse( idx_1_aln, L1_aln );
-    reverse( idx_2_aln, L2_aln );
+    Laln = k;
+    reverse( idx_1_aln, Laln );
+    reverse( idx_2_aln, Laln );
 
     if( prm ) {
         cout << "\nDynamic programming matrix: " << endl;

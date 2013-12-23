@@ -1,5 +1,6 @@
 CXX = g++
-CXXFLAGS = -Wall -ansi -pedantic -O3 -g --std=c++0x
+#CXXFLAGS = -Wall -ansi -pedantic -O3 -g --std=c++0x
+CXXFLAGS = -Wall -ansi -pedantic -O0 -g --std=c++0x #debug mode
 LDFLAGS = -Wl,-rpath,/usr/local/lib
 OBJECTS = main.o nwdp.o
 BINPATH = ../bin
