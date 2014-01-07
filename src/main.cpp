@@ -218,84 +218,135 @@ int main( int argc, char ** argv )
 		/* local alignment */
 		if( setlocal1_flag )
 		{
-			cout << "LOCAL ALIGNMENT " << endl;
+			int nrlocal = 3;   // number of optimal local alignments that should be calculated
+			float overlap = 0.5;   // maximal overlap allowed of local hit before they are concatenated
+			float minLsim = 0.1;   // minimal local similarity to be considered
+			vector<LocalHit> lhit;
+			for( int i=0; i<nrlocal; i++ ) {
+				lhit.push_back( LocalHit() );
+				lhit[ i ].similarity = 0;
+			}
+
+	        /* initialize arrays of indices */
+			int *idx_1_aln_local = new int[len_1];
+			int *idx_2_aln_local = new int[len_2];
 
 			/* local alignment for each pair of pairing probabilities that includes the two reference bases */
 			for( int l=0; l<len_2; l++)
 				for( int k = 0; k<len_1; k++)
 				{
-					cerr << "run local nwdp for pair " << k << " and " << l << endl;
-			        /* initialize arrays of indices */
-					int *idx_1_aln_local = new int[len_1];
 					for( int i=0; i<len_1; i++ ) idx_1_aln_local[ i ] = i;
-					int *idx_2_aln_local = new int[len_2];
 					for( int i=0; i<len_2; i++ ) idx_2_aln_local[ i ] = i;
 
 					/* locally align pairing probabilities of S_a(k) and S_b(l) */
 					float similarity;
 					int len_local = 1;
 					similarity = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln_local[k], idx_1_aln_local, len_1, seq_2, probDbl_2, probSgl_2, idx_2_aln_local[l], idx_2_aln_local, len_2, len_local, setprintmatrix_flag );
+					cerr << "Local similarity for pair " << k << " and " << l << " -> " << similarity << endl;
 					//cerr << "Local Sim = " << similarity << "; Length = " << len_local;
 					//cerr << "; LS_a START = " << idx_1_aln_local[ 0 ] << "; LS_a END = " << idx_1_aln_local[ len_local-1 ];
 					//cerr << "; LS_b START = " << idx_2_aln_local[ 0 ] << "; LS_b END = " << idx_2_aln_local[ len_local-1 ] << endl;
 
-					/* for optimal local alignment we test if the aligned local sequences LS_a and LS_b include the base k and base l */
-					if( similarity < 0.1 || k < idx_1_aln_local[ 0 ] || k > idx_1_aln_local[ len_local-1 ] || l < idx_2_aln_local[ 0 ] || l > idx_2_aln_local[ len_local-1 ] )
-						continue;
+					/* for optimal local alignment we test if the aligned local sequences LS_a and LS_b include the base k and base l
+					 * and if no more than <nrlocal-1> local alignments with higher similarity exist */
+					if( similarity > lhit.front().similarity && k >= idx_1_aln_local[ 0 ] && k <= idx_1_aln_local[ len_local-1 ] && l >= idx_2_aln_local[ 0 ] && l <= idx_2_aln_local[ len_local-1 ] )
+					{
+						/* if local hit overlaps another hit more then <overlap> in S_a and S_b then concatenate */
+						vector<LocalHit>::iterator lhitIt;
+						for( lhitIt = lhit.begin(); lhitIt != lhit.end(); lhitIt++ )
+						{
+							if( ! lhitIt.base()->similarity ) continue;
 
-					/* run STEP 1 with global alignments of LS_a against S_b */
-					for( int i=0; i<len_2; i++ ) idx_2_aln_local[ i ] = i;
-					float **sim_local = new float*[ len_2 ];
-					for( int n=0; n<len_2; n++ ) {
-						sim_local[n] = new float[ len_local ];
-						for( int m = 0; m<len_local; m++ )
-							sim_local[ n ][ m ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln_local[m], idx_1_aln_local, len_local, seq_2, probDbl_2, probSgl_2, idx_2_aln_local[n], idx_2_aln_local, len_2, global, setprintmatrix_flag );
+							float over1 = getOverlap2ndInterval( idx_1_aln_local[ 0 ], idx_1_aln_local[ len_local-1 ], lhitIt.base()->lstart_1, lhitIt.base()->lend_1 );
+							float over2 = getOverlap2ndInterval( idx_2_aln_local[ 0 ], idx_2_aln_local[ len_local-1 ], lhitIt.base()->lstart_2, lhitIt.base()->lend_2 );
+							float over1r = getOverlap2ndInterval( lhitIt.base()->lstart_1, lhitIt.base()->lend_1, idx_1_aln_local[ 0 ], idx_1_aln_local[ len_local-1 ] );
+							float over2r = getOverlap2ndInterval( lhitIt.base()->lstart_2, lhitIt.base()->lend_2, idx_2_aln_local[ 0 ], idx_2_aln_local[ len_local-1 ] );
+							if( over1 > overlap || over1r > overlap )
+								if( over2 > overlap || over2r > overlap )
+								{
+									// concatenate
+									lhitIt.base()->lstart_1 = min( lhitIt.base()->lstart_1, idx_1_aln_local[ 0 ] );
+									lhitIt.base()->lend_1 = max( lhitIt.base()->lend_1, idx_1_aln_local[ len_local-1 ] );
+									lhitIt.base()->lstart_2 = min( lhitIt.base()->lstart_2, idx_2_aln_local[ 0 ] );
+									lhitIt.base()->lend_2 = max( lhitIt.base()->lend_2, idx_2_aln_local[ len_local-1 ] );
+									if( similarity > lhitIt.base()->similarity )
+										lhitIt.base()->similarity = similarity;
+
+									break;
+								}
+						}
+						if( lhitIt != lhit.end() ) continue;
+
+						/* store similarity, start and end position of LS_a and LS_b */
+						lhit.front().similarity = similarity;
+						lhit.front().lstart_1 = idx_1_aln_local[ 0 ];
+						lhit.front().lend_1 = idx_1_aln_local[ len_local-1 ];
+						lhit.front().lstart_2 = idx_2_aln_local[ 0 ];
+						lhit.front().lend_2 = idx_2_aln_local[ len_local-1 ];
+
+						/* sort top <nrlocal> local hits with lowest similarities */
+						sort( lhit.begin(), lhit.end(), compareBySimilarity );
 					}
-
-					/* run STEP 2 on the similarities of LS_a */
-					int *tmp_idx_1_aln_local = new int[len_local];
-					int *tmp_idx_2_aln_local = new int[len_2];
-					//for( int i=0; i<len_local; i++ ) cout << idx_1_aln_local[ i ] << ","; cout << endl;
-					//for( int j=0; j<len_local; j++ ) cout << idx_2_aln_local[ j ] << ","; cout << endl;
-					simalign_affinegaps( sim_local, len_local, len_2, tmp_idx_1_aln_local, tmp_idx_2_aln_local, len_aln, precision, 0, setprintmatrix_flag);
-					for( int i=0; i<len_aln; i++ ) {
-						idx_1_aln_local[ i ] = idx_1_aln_local[ tmp_idx_1_aln_local[ i ] ];
-						idx_2_aln_local[ i ] = idx_2_aln_local[ tmp_idx_2_aln_local[ i ] ];
-					}
-					delete[] tmp_idx_1_aln_local;
-					delete[] tmp_idx_2_aln_local;
-
-					/* calculate final similarity */
-					similarity = 0.;
-					for( int i=0; i<len_aln; i++ )
-						similarity += nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln_local[i], idx_1_aln_local, len_aln, seq_2, probDbl_2, probSgl_2, idx_2_aln_local[i], idx_2_aln_local, len_aln, global, setprintmatrix_flag );
-					int open = 0, extended = 0;
-					affinegapcosts(idx_1_aln_local, idx_2_aln_local, len_aln, open, extended);
-					//similarity = ( len_1_aln ) ? ( similarity + alpha * ( len_1 + len_2 - len_1_aln - len_1_aln ) ) / len_1_aln : 0;
-					similarity = ( len_aln ) ? ( similarity + alpha * open + beta * extended ) / ( len_aln + extended ) : 0;
-
-					/* OUTPUT */
-					/* print aligned probabilities and similarity */
-					cout << "Similarity = " << similarity << ", Length_1 = " << len_1 << ", Unaligned_1 = " << len_1-len_aln;
-					cout << ", Length_2 = " << len_2 << ", Unaligned_2 = " << len_2-len_aln << endl;
-
-					/* print sequences aligned by dot plot alignment */
-					for( int i=0; i<len_aln; i++ ) cout << idx_1_aln_local[ i ] << ","; cout << endl;
-					for( int j=0; j<len_aln; j++ ) cout << idx_2_aln_local[ j ] << ","; cout << endl;
-					printalign(seq_1, idx_1_aln_local, seq_2, idx_2_aln_local, len_aln);
-
-					/* free memory */
-					freeMatrix(sim_local, len_2);
-			        delete[] idx_1_aln_local;
-			        delete[] idx_2_aln_local;
 				}
 
-			/* sort local alignments by their similarity */
+			/* run global DotAligner for top <nrlocal> LS_a against S_b */
+			for( vector<LocalHit>::iterator lhitIt = lhit.end()-1; lhitIt != lhit.begin()-1; lhitIt-- )
+			{
+				if( lhitIt.base()->similarity < minLsim )
+					continue;
+				//cerr << "LocalHit: " << lhitIt.base()->similarity << " " << lhitIt.base()->lstart_1 << " " << lhitIt.base()->lend_1 << " " << lhitIt.base()->lstart_2 << " " << lhitIt.base()->lend_2 << endl;
 
-			/* OUTPUT */
-			/* print aligned probabilities and similarity */
-			/* print sequences aligned by dot plots alignment */
+				/* run STEP 1 with global alignments of LS_a against  LS_b */
+				int len_local_1 = lhitIt.base()->lend_1 - lhitIt.base()->lstart_1 + 1;
+				for( int i=0; i < len_local_1; i++ ) idx_1_aln_local[ i ] = lhitIt.base()->lstart_1 + i;
+				int len_local_2 = lhitIt.base()->lend_2 - lhitIt.base()->lstart_2 + 1;
+				for( int i=0; i < len_local_2; i++ ) idx_2_aln_local[ i ] = lhitIt.base()->lstart_2 + i;
+				float **sim_local = new float*[ len_local_2 ];
+				for( int n=0; n<len_local_2; n++ ) {
+					sim_local[n] = new float[ len_local_1 ];
+					for( int m = 0; m<len_local_1; m++ )
+						sim_local[ n ][ m ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln_local[m], idx_1_aln_local, len_local_1, seq_2, probDbl_2, probSgl_2, idx_2_aln_local[n], idx_2_aln_local, len_local_2, global, setprintmatrix_flag );
+				}
 
+				/* run STEP 2 on the similarities of LS_a */
+				int *tmp_idx_1_aln_local = new int[len_local_1];
+				int *tmp_idx_2_aln_local = new int[len_local_2];
+				//for( int i=0; i<len_local; i++ ) cout << idx_1_aln_local[ i ] << ","; cout << endl;
+				//for( int j=0; j<len_local; j++ ) cout << idx_2_aln_local[ j ] << ","; cout << endl;
+				simalign_affinegaps( sim_local, len_local_1, len_local_2, tmp_idx_1_aln_local, tmp_idx_2_aln_local, len_aln, precision, 0, setprintmatrix_flag);
+				for( int i=0; i<len_aln; i++ ) {
+					idx_1_aln_local[ i ] = idx_1_aln_local[ tmp_idx_1_aln_local[ i ] ];
+					idx_2_aln_local[ i ] = idx_2_aln_local[ tmp_idx_2_aln_local[ i ] ];
+				}
+				delete[] tmp_idx_1_aln_local;
+				delete[] tmp_idx_2_aln_local;
+
+				/* calculate final similarity */
+				float similarity = 0.;
+				for( int i=0; i<len_aln; i++ )
+					similarity += nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln_local[i], idx_1_aln_local, len_aln, seq_2, probDbl_2, probSgl_2, idx_2_aln_local[i], idx_2_aln_local, len_aln, global, setprintmatrix_flag );
+				int open = 0, extended = 0;
+				affinegapcosts(idx_1_aln_local, idx_2_aln_local, len_aln, open, extended);
+				//similarity = ( len_1_aln ) ? ( similarity + alpha * ( len_1 + len_2 - len_1_aln - len_1_aln ) ) / len_1_aln : 0;
+				similarity = ( len_aln ) ? ( similarity + alpha * open + beta * extended ) / ( len_aln + extended ) : 0;
+
+				/* OUTPUT */
+				/* print aligned probabilities and similarity */
+				cout << "Similarity = " << similarity << ", Length_1 = " << len_1 << ", Unaligned_1 = " << len_1-len_aln;
+				cout << ", Length_2 = " << len_2 << ", Unaligned_2 = " << len_2-len_aln << endl;
+
+				/* print sequences aligned by dot plot alignment */
+				for( int i=0; i<len_aln; i++ ) cout << idx_1_aln_local[ i ] << ","; cout << endl;
+				for( int j=0; j<len_aln; j++ ) cout << idx_2_aln_local[ j ] << ","; cout << endl;
+				printalign(seq_1, idx_1_aln_local, seq_2, idx_2_aln_local, len_aln);
+
+				/* free memory */
+				freeMatrix(sim_local, len_2);
+			}
+
+			/* free memory */
+	        delete[] idx_1_aln_local;
+	        delete[] idx_2_aln_local;
 		}
 
 		/* semi-local (global) alignment */

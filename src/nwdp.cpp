@@ -509,7 +509,7 @@ float nwdb_local_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, fl
     i = li;
     j = lj;
     similarity = lmax;
-    cerr << "LSCORE = " << similarity << endl;
+    //cerr << "LSCORE = " << similarity << endl;
     //cerr << i << " " << j << " " << maxmat << endl;
 
     /* backtracking */
@@ -589,7 +589,6 @@ float nwdb_local_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, fl
     for( int j = 0; j <= L2; j++ )  delete trQ[ j ];
     delete[] trQ;
 
-    cerr << "LSIM = " << similarity << endl;
     return similarity;
 }
 
@@ -744,7 +743,7 @@ float simalign( float ** Z, int L1, int L2, int * idx_1_aln, int * idx_2_aln, in
         j = lj;
         sim = lmax;
     }
-    cerr << i << " " << j << endl;
+    //cerr << i << " " << j << endl;
 
     /* backtracking */
     int k = 0;
@@ -887,7 +886,7 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
         j = lj;
         sim = lmax;
     }
-    cerr << i << " " << j << " " << maxmat << endl;
+    //cerr << i << " " << j << " " << maxmat << endl;
 
     /* backtracking */
     int k = 0;
@@ -1011,6 +1010,35 @@ void reverse( int * list, int len )
 	    list[ i ] = list[ len-i-1 ];
 	    list[ len-i-1 ] = temp;
 	}
+}
+
+
+bool compareBySimilarity(const LocalHit& a, const LocalHit& b)
+{
+	// smallest comes first
+	return a.similarity < b.similarity;
+}
+
+/*
+ * return overlap of the second interval by the first interval
+ */
+float getOverlap2ndInterval( int start_1, int end_1, int start_2, int end_2 )
+{
+	int len_2 = end_2 - start_2 + 1;
+
+	if( end_1 >= start_2 )
+		if( start_1 <= start_2 )
+			if( end_1 <= end_2 )
+				return (float) (end_1 - start_2 + 1) / len_2;
+			else
+				return 1.;
+		else
+			if( end_1 <= end_2)
+				return (float) (end_1 - start_2 + 1 - start_1 + start_2) / len_2;
+			else
+				return (float) (end_2 - start_1 + 1) / len_2;
+	else
+		return 0.;
 }
 
 

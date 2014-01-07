@@ -41,6 +41,14 @@ extern float beta;
 
 extern float INFINITE;
 
+typedef struct tagLocalHit {
+	float similarity;		/* Similarity */
+	int lstart_1;			/* Start position of LS_a */
+	int lend_1;				/* End position of LS_a */
+	int lstart_2;			/* Start position of LS_b */
+	int lend_2;				/* End position of LS_b */
+} LocalHit;
+
 extern int readinput( istream & is, string & name, string & seq, vector<float> & prob );
 extern void getunpaired( vector<float> & prob, int len, vector<float> & probSgl );
 vector<string> &split(const string &s, char delim, vector<string> &elems);
@@ -65,6 +73,8 @@ extern float simalign_affinegaps( float ** Z, int len_1, int len_2, int * idx_1_
 extern void affinegapcosts( int * idx_1_aln, int * idx_2_aln, int & len_aln, int & open, int & extended );
 extern void nwdp_initTB( char ** traceback, int L1, int L2 );
 extern void reverse( int * list, int len );
+extern bool compareBySimilarity(const LocalHit& a, const LocalHit& b);
+extern float getOverlap2ndInterval( int start_1, int end_1, int start_2, int end_2 );
 extern void printalign(string & seq_1, int * idx_1_aln, string & seq_2, int * idx_2_aln, int len_aln );
 extern void freeMatrix(float ** matrix, int leny);
 
