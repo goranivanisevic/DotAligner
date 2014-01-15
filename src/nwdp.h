@@ -60,7 +60,8 @@ extern void nwdp_initF( float ** F, int L1, int L2 );
 extern void nwdp_initF_affinegaps( float ** F, int L1, int L2, bool local );
 extern void nwdp_initGap( float ** Q, int L1, int L2 );
 extern float nwdb_align( char nuc_1, float probSgl_1, string seq_1, float* probDbl_1, int len_1, char nuc_2, float probSgl_2, string seq_2, float* probDbl_2, int len_2 );
-extern float nwdb_global_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, float* probDbl_1, int len_1, char nuc_2, float probSgl_2, string seq_2, float* probDbl_2, int len_2 );
+extern float nwdb_align_seq_sim( char nuc_1, float probSgl_1, char nuc_2, float probSgl_2 );
+extern float nwdb_global_align_affinegaps( float* probDbl_1, int len_1, float* probDbl_2, int len_2 );
 extern float nwdb_local_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, float* probDbl_1, int len_1, char nuc_2, float probSgl_2, string seq_2, float* probDbl_2, int len_2, int * idx_1_local_aln, int * idx_2_local_aln, int & len_aln );
 extern float max3( float f1, float f2, float f3, char* ptr );
 extern float min3( float f1, float f2, float f3, char* ptr );
@@ -75,6 +76,8 @@ extern void nwdp_initTB( char ** traceback, int L1, int L2 );
 extern void reverse( int * list, int len );
 extern bool compareBySimilarity(const LocalHit& a, const LocalHit& b);
 extern float getOverlap2ndInterval( int start_1, int end_1, int start_2, int end_2 );
+extern void getlogoddsDbl( vector<float> & probDbl, string seq, int len, float pnull );
+extern void getlogoddsSgl( vector<float> & probSgl, string seq, int len, float pnull );
 extern void printalign(string & seq_1, int * idx_1_aln, string & seq_2, int * idx_2_aln, int len_aln );
 extern void freeMatrix(float ** matrix, int leny);
 

@@ -76,11 +76,12 @@ int main( int argc, char ** argv )
         vector<float> probSgl_2;
         int len_1 = 0, len_2 = 0, len_aln = 0, len_1_last = 0, len_2_last = 0;
         string name1, name2, seq_1, seq_2;
-        int precision = 2;
+        int precision = 4;
         int iter = -1;
         int maxshift = INFINITE;
         int seednr = 5;
         int seedlen = 5;
+        float pnull = 0.0005;
 
         /* arguments */
         string  filename1, filename2;
@@ -92,7 +93,7 @@ int main( int argc, char ** argv )
         static int setlocal1_flag = 0;
         static int setglobal2_flag = 0;
         static int help_flag = 0;
-        static int global = 0;
+        static int local = 0;
 
     	/* parsing long options */
     	while(1)
@@ -112,8 +113,8 @@ int main( int argc, char ** argv )
     			{"maxshift", required_argument, 0, 'm'},		// maximal shift of two input sequences in the final alignment (default 50% of longer sequence)
     			{"seednr", required_argument, 0, 's'},			// number of seed alignments (default 3)
     			{"seedlen", required_argument, 0, 'l'},			// length of seed alignments (default 5 nucleotides)
+    			{"pnull", required_argument, 0, 'n'},			// minimal probability
     			{"help", no_argument, &help_flag, 1},
-
     			{0, 0, 0, 0}
     		};
 
@@ -124,7 +125,7 @@ int main( int argc, char ** argv )
     		/* getopt_long stores the option index here. */
     		int option_index = 0;
 
-    		int cmd = getopt_long(argc, argv, "d:k:a:b:p:m:s:l:", long_options, &option_index);
+    		int cmd = getopt_long(argc, argv, "d:k:a:b:p:m:s:l:n:", long_options, &option_index);
 
     		/* Detect the end of the options. */
     		if (cmd == -1)
@@ -147,6 +148,7 @@ int main( int argc, char ** argv )
     			case 'm': maxshift = atoi(optarg); break;
     			case 's': seednr = atoi(optarg); break;
     			case 'l': seedlen = atoi(optarg); break;
+    			case 'n': pnull = atof(optarg); break;
     			default:  abort();
     			/* no break */
     		}
@@ -209,6 +211,12 @@ int main( int argc, char ** argv )
         getunpaired(probDbl_1, len_1, probSgl_1);
         getunpaired(probDbl_2, len_2, probSgl_2);
 
+        /* log-odds scores */
+        getlogoddsDbl(probDbl_1, seq_1, len_1, pnull );
+        getlogoddsDbl(probDbl_2, seq_2, len_2, pnull );
+        getlogoddsSgl( probSgl_1, seq_1, len_1, pnull );
+        getlogoddsSgl( probSgl_2, seq_2, len_2, pnull );
+
         /* reduce depth of probability matrices */
         reducematrix(probDbl_1, len_1*len_1, precision);
         reducematrix(probDbl_2, len_2*len_2, precision);
@@ -220,7 +228,7 @@ int main( int argc, char ** argv )
 		{
 			int nrlocal = 3;   // number of optimal local alignments that should be calculated
 			float overlap = 0.5;   // maximal overlap allowed of local hit before they are concatenated
-			float minLsim = 0.1;   // minimal local similarity to be considered
+			float minLsim = 0.01;   // minimal local similarity to be considered
 			vector<LocalHit> lhit;
 			for( int i=0; i<nrlocal; i++ ) {
 				lhit.push_back( LocalHit() );
@@ -242,7 +250,7 @@ int main( int argc, char ** argv )
 					float similarity;
 					int len_local = 1;
 					similarity = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln_local[k], idx_1_aln_local, len_1, seq_2, probDbl_2, probSgl_2, idx_2_aln_local[l], idx_2_aln_local, len_2, len_local, setprintmatrix_flag );
-					cerr << "Local similarity for pair " << k << " and " << l << " -> " << similarity << endl;
+					cerr << "Local similarity for pair " << k << " and " << l << " -> " << similarity << " from " << idx_1_aln_local[ 0 ] << " to " << idx_1_aln_local[ len_local-1 ] << " in S_a and from " << idx_2_aln_local[ 0 ] << " to " << idx_2_aln_local[ len_local-1 ] << " in S_b of length " << len_local << endl;
 					//cerr << "Local Sim = " << similarity << "; Length = " << len_local;
 					//cerr << "; LS_a START = " << idx_1_aln_local[ 0 ] << "; LS_a END = " << idx_1_aln_local[ len_local-1 ];
 					//cerr << "; LS_b START = " << idx_2_aln_local[ 0 ] << "; LS_b END = " << idx_2_aln_local[ len_local-1 ] << endl;
@@ -294,7 +302,7 @@ int main( int argc, char ** argv )
 			{
 				if( lhitIt.base()->similarity < minLsim )
 					continue;
-				//cerr << "LocalHit: " << lhitIt.base()->similarity << " " << lhitIt.base()->lstart_1 << " " << lhitIt.base()->lend_1 << " " << lhitIt.base()->lstart_2 << " " << lhitIt.base()->lend_2 << endl;
+				cerr << "LocalHit: " << lhitIt.base()->similarity << " " << lhitIt.base()->lstart_1 << " " << lhitIt.base()->lend_1 << " " << lhitIt.base()->lstart_2 << " " << lhitIt.base()->lend_2 << endl;
 
 				/* run STEP 1 with global alignments of LS_a against  LS_b */
 				int len_local_1 = lhitIt.base()->lend_1 - lhitIt.base()->lstart_1 + 1;
@@ -305,7 +313,7 @@ int main( int argc, char ** argv )
 				for( int n=0; n<len_local_2; n++ ) {
 					sim_local[n] = new float[ len_local_1 ];
 					for( int m = 0; m<len_local_1; m++ )
-						sim_local[ n ][ m ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln_local[m], idx_1_aln_local, len_local_1, seq_2, probDbl_2, probSgl_2, idx_2_aln_local[n], idx_2_aln_local, len_local_2, global, setprintmatrix_flag );
+						sim_local[ n ][ m ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln_local[m], idx_1_aln_local, len_local_1, seq_2, probDbl_2, probSgl_2, idx_2_aln_local[n], idx_2_aln_local, len_local_2, local, setprintmatrix_flag );
 				}
 
 				/* run STEP 2 on the similarities of LS_a */
@@ -324,7 +332,7 @@ int main( int argc, char ** argv )
 				/* calculate final similarity */
 				float similarity = 0.;
 				for( int i=0; i<len_aln; i++ )
-					similarity += nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln_local[i], idx_1_aln_local, len_aln, seq_2, probDbl_2, probSgl_2, idx_2_aln_local[i], idx_2_aln_local, len_aln, global, setprintmatrix_flag );
+					similarity += nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln_local[i], idx_1_aln_local, len_aln, seq_2, probDbl_2, probSgl_2, idx_2_aln_local[i], idx_2_aln_local, len_aln, local, setprintmatrix_flag );
 				int open = 0, extended = 0;
 				affinegapcosts(idx_1_aln_local, idx_2_aln_local, len_aln, open, extended);
 				//similarity = ( len_1_aln ) ? ( similarity + alpha * ( len_1 + len_2 - len_1_aln - len_1_aln ) ) / len_1_aln : 0;
@@ -359,8 +367,8 @@ int main( int argc, char ** argv )
 			for( int i=0; i<len_2; i++ ) idx_2_aln[ i ] = i;
 
 			/* repeat alignment until no changes in alignment */
-			while( len_1_last != len_aln || len_2_last != len_aln )
-			{
+			//while( len_1_last != len_aln || len_2_last != len_aln )
+			//{
 				len_1_last = ( iter == -1 ) ? len_1 : len_aln;
 				len_2_last = ( iter == -1 ) ? len_2 : len_aln;
 
@@ -391,7 +399,7 @@ int main( int argc, char ** argv )
 								seedsim[ j ][ i ] = INFINITE;
 						cerr << "SEED ALIGNMENT NR " << s+1 << endl;
 						// get seed sequence from longer sequence
-						int seedstart = int( (float)minlen*rand()/(RAND_MAX + 1.0) );
+						int seedstart = int( (float)(minlen-seedlen)*rand()/(RAND_MAX + 1.0) );
 						//seedstart =+ int( (rand()%minlen)+1 / 2 );
 						for( int i=0; i<seedlen; i++ )
 							idx_seed_aln[ i ] = seedstart + i;
@@ -404,9 +412,9 @@ int main( int argc, char ** argv )
 								if( k + maxshift >= l && k - maxshift <= l )
 								{
 									if( len_2_last > len_1_last )
-										sim[ l ][ k ] = seedsim[ l ][ k-seedstart ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[k], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[l], idx_2_aln, len_2_last, global, 0 );
+										sim[ l ][ k ] = seedsim[ l ][ k-seedstart ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[k], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[l], idx_2_aln, len_2_last, local, 0 );
 									else
-										sim[ k ][ l ] = seedsim[ l ][ k-seedstart ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[l], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[k], idx_2_aln, len_2_last, global, 0 );
+										sim[ k ][ l ] = seedsim[ l ][ k-seedstart ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[l], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[k], idx_2_aln, len_2_last, local, 0 );
 								}
 						// run simalign_affinegaps
 						int *tmp_idx_seed_aln = new int[seedlen];
@@ -423,8 +431,8 @@ int main( int argc, char ** argv )
 							for( int j=0; j<len_seed_aln; j++ ) cout << tmp_idx_max_aln[ j ] << " " << seq_2.at(tmp_idx_max_aln[ j ]) << "\t"; cout << endl;
 						}
 						else {
-							for( int i=0; i<len_seed_aln; i++ ) cout << tmp_idx_seed_aln[ i ] << " " << seq_2.at(tmp_idx_seed_aln[ i ]) << "\t"; cout << endl;
 							for( int j=0; j<len_seed_aln; j++ ) cout << tmp_idx_max_aln[ j ] << " " << seq_1.at(tmp_idx_max_aln[ j ]) << "\t"; cout << endl;
+							for( int i=0; i<len_seed_aln; i++ ) cout << tmp_idx_seed_aln[ i ] << " " << seq_2.at(tmp_idx_seed_aln[ i ]) << "\t"; cout << endl;
 						}
 						delete[] tmp_idx_seed_aln;
 						int targetlen = tmp_idx_max_aln[ len_seed_aln-1 ] - tmp_idx_max_aln[ 0 ] + 1;
@@ -464,7 +472,7 @@ int main( int argc, char ** argv )
 					for( k = 0; k<len_1_last; k++)
 						if( *min + maxshift >= *max && *min - maxshift <= *max ) {
 							if( sim[ l ][ k ] == INFINITE )
-								sim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[k], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[l], idx_2_aln, len_2_last, global, setprintmatrix_flag );
+								sim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[k], idx_1_aln, len_1_last, seq_2, probDbl_2, probSgl_2, idx_2_aln[l], idx_2_aln, len_2_last, local, setprintmatrix_flag );
 							count++;
 						}
 				cerr << "ENDNWDP " << maxshift << " " << count << endl;
@@ -507,12 +515,12 @@ int main( int argc, char ** argv )
 
 				/* free memory */
 				freeMatrix(sim, len_2_last);
-			}
+			//}
 
 			/* calculate final similarity */
 			float similarity = 0.;
 			for( int i=0; i<len_aln; i++ )
-				similarity += nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[i], idx_1_aln, len_aln, seq_2, probDbl_2, probSgl_2, idx_2_aln[i], idx_2_aln, len_aln, global, setprintmatrix_flag );
+				similarity += nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[i], idx_1_aln, len_aln, seq_2, probDbl_2, probSgl_2, idx_2_aln[i], idx_2_aln, len_aln, local, setprintmatrix_flag );
 			int open = 0, extended = 0;
 			affinegapcosts(idx_1_aln, idx_2_aln, len_aln, open, extended);
 			//similarity = ( len_1_aln ) ? ( similarity + alpha * ( len_1 + len_2 - len_1_aln - len_1_aln ) ) / len_1_aln : 0;

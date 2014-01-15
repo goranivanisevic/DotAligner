@@ -13,7 +13,7 @@ using namespace std;
 
 void usage_dotaligner(char *program)
 {
-	cerr << "\nDotAligner v0.1";
+	cerr << "\nDotAligner v0.2";
 	cerr << "\n===============";
 	cerr << "\n   by Stefan E Seemann (seemann@rth.dk)\n";
 	cerr << "\n   Usage:   " << program << " -d <file> -d <file> [ options ]";
@@ -25,17 +25,18 @@ void usage_dotaligner(char *program)
     cerr << "\n   --logodds             ... replace probabilities by expectation normalized log odds";
     cerr << "\n   --local1              ... local alignment in step 1 (default is global in step 1)";
     cerr << "\n   --global2             ... global alignment in step 2 (default is local alignment in step 2)";
-    cerr << "\n   -k --kappa <nr>       ... weight of sequence similarity (0..1; default = 0.5); 1 - kappa is weight of dotplots";
-    cerr << "\n   -a --alpha <nr>       ... affine gap costs = alpha + k * beta (k gaps; alpha default = -4)";
+    cerr << "\n   -k --kappa <float>    ... weight of sequence similarity (0..1; default = 0.5); 1 - kappa is weight of dotplots";
+    cerr << "\n   -a --alpha <float>    ... affine gap costs = alpha + k * beta (k gaps; alpha default = -4)";
     cerr << "\n                             set <alpha> equal 0 to make the score becomes larger as a linear function of gap length";
-    cerr << "\n   -b --beta <nr>        ... affine gap costs = alpha + k * beta (k gaps; beta default = -1)";
+    cerr << "\n   -b --beta <float>     ... affine gap costs = alpha + k * beta (k gaps; beta default = -1)";
     cerr << "\n                             set <beta> equal 0 to keep the score similar regardless of gap length";
-    cerr << "\n   -p --precision <nr>   ... number of digits considered of base pair reliabilities (default = 2)";
-    cerr << "\n   -m --maxshift <nr>    ... maximal shift of two input sequences in the final alignment (default 50% of longer sequence)";
+    cerr << "\n   -p --precision <int>  ... number of digits considered of log-odds of base pair reliabilities (default = 4)";
+    cerr << "\n   -m --maxshift <int>   ... maximal shift of two input sequences in the final alignment (default 50% of longer sequence)";
     cerr << "\n                             speeds up the calculation by ignoring pairwise comparisons of distant nucleotides";
     cerr << "\n                             local alignments may be missed for long sequences if <maxshift> is set too low";
-    cerr << "\n   -s --seednr <nr>      ... number of seed alignments (default = 3)";
-    cerr << "\n   -l --seedlen <nr>     ... length of seed alignments (default = 5 nucleotides)\n";
+    cerr << "\n   -s --seednr <int>     ... number of seed alignments (default = 3)";
+    cerr << "\n   -l --seedlen <int>    ... length of seed alignments (default = 5 nucleotides)\n";
+    cerr << "\n   -n --pnull <prob>     ... Minimal probability (default = 0.0005 )\n";
 	cerr << "\n   --help                ... this output\n";
     cerr << "\n   Output:   similarity and alignment\n\n";
 
@@ -174,7 +175,73 @@ float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, 
 
     /* create global alignment */
     if( !local )
-    	sim = nwdb_global_align_affinegaps( seq_1.c_str()[idx_1], probSgl_1.at(idx_1), subseq_1, subprob_1, len_1, seq_2.c_str()[idx_2], probSgl_2.at(idx_2), subseq_2, subprob_2, len_2 );
+    {
+    	//sim = nwdb_global_align_affinegaps( seq_1.c_str()[idx_1], probSgl_1.at(idx_1), subseq_1, subprob_1, len_1, seq_2.c_str()[idx_2], probSgl_2.at(idx_2), subseq_2, subprob_2, len_2 );
+    	float tau = 0;
+    	/* alignment upstream of the constraint pair ( idx_1, idx_2 ) */
+    	if( idx_1>0 && idx_2>0 )
+    	{
+    		float* subprob_1u = new float[idx_1];
+    		float* subprob_2u = new float[idx_2];
+    		//cerr << "SP1U " << endl;
+    		for( int i = 0; i < idx_1; i++ ) {
+    			subprob_1u[ i ] = probDbl_1.at( sidx_1 + idx_1_aln[ i ] );
+    			//cerr << subprob_1u[ i ] << " ";
+    		}
+    		//cerr << endl;
+    		//cerr << "SP2U " << endl;
+    		for( int j = 0; j < idx_2; j++ ) {
+    			subprob_2u[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ j ] );
+    			//cerr << subprob_2u[ j ] << " ";
+    		}
+    		//cerr << endl;
+    		/*string subseq_1u;
+    		for( int i = 0; i < idx_1; i++ )
+    			subseq_1u += seq_1.at( idx_1_aln[ i ] );
+    		string subseq_2u;
+    		for( int j = 0; j < idx_2; j++ )
+    			subseq_2u += seq_2.at( idx_2_aln[ j ] );*/
+    		tau = nwdb_global_align_affinegaps( subprob_1u, idx_1, subprob_2u, idx_2 );
+    		//cerr << "TAU1 " << tau << endl;
+    		//tau = nwdb_global_align_affinegaps( seq_1.c_str()[idx_1], probSgl_1.at(idx_1), subseq_1u, subprob_1u, idx_1, seq_2.c_str()[idx_2], probSgl_2.at(idx_2), subseq_2u, subprob_2u, idx_2 );
+           	delete[] subprob_1u;
+           	delete[] subprob_2u;
+    	}
+    	/* alignment downstream of the constraint pair ( idx_1, idx_2 ) */
+    	if( idx_1<len_1-1 && idx_2<len_2-1 )
+    	{
+			float* subprob_1d = new float[len_1-idx_1-1];
+			float* subprob_2d = new float[len_2-idx_2-1];
+    		//cerr << "SP1D " << endl;
+			for( int i = 0; i < len_1-idx_1-1; i++ ) {
+				subprob_1d[ i ] = probDbl_1.at( sidx_1 + idx_1_aln[ idx_1+i+1 ] );
+				//cerr << subprob_1d[ i ] << " ";
+			}
+			//cerr << endl;
+    		//cerr << "SP2D " << endl;
+			for( int j = 0; j < len_2-idx_2-1; j++ ) {
+				subprob_2d[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ idx_2+j+1 ] );
+    			//cerr << subprob_2d[ j ] << " ";
+    		}
+    		//cerr << endl;
+			/*string subseq_1d;
+			for( int i = 0; i < len_1-idx_1-1; i++ )
+				subseq_1d += seq_1.at( idx_1_aln[ idx_1+i+1 ] );
+			string subseq_2d;
+			for( int j = 0; j < len_2-idx_2-1; j++ )
+				subseq_2d += seq_2.at( idx_2_aln[ idx_2+j+1 ] );*/
+			//cerr << "TAU2 " << nwdb_global_align_affinegaps( subprob_1d, len_1-idx_1-1, subprob_2d, len_2-idx_2-1 ) << endl;
+			tau += nwdb_global_align_affinegaps( subprob_1d, len_1-idx_1-1, subprob_2d, len_2-idx_2-1 );
+			//tau += nwdb_global_align_affinegaps( seq_1.c_str()[idx_1], probSgl_1.at(idx_1), subseq_1d, subprob_1d, len_1-idx_1-1, seq_2.c_str()[idx_2], probSgl_2.at(idx_2), subseq_2d, subprob_2d, len_2-idx_2-1 );
+	       	delete[] subprob_1d;
+	       	delete[] subprob_2d;
+    	}
+        // length of shorter sequence
+        int minlen = ( len_2 > len_1 ) ? len_1 : len_2;
+    	float sigma = nwdb_align_seq_sim( seq_1.c_str()[idx_1], probSgl_1.at(idx_1), seq_2.c_str()[idx_2], probSgl_2.at(idx_2) );
+    	sim = kappa * sigma + ( 1 - kappa ) * tau / ( minlen - 1 );
+    	cerr << idx_1 << " " << idx_2 << " " << sigma << " " << tau / ( minlen - 1 ) << " " << sim << endl;
+    }
     /* create local alignment */
     else
     {
@@ -321,15 +388,11 @@ float nwdb_align( char nuc_1, float probSgl_1, string seq_1, float* probDbl_1, i
 }
 
 
-float nwdb_global_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, float* probDbl_1, int L1, char nuc_2, float probSgl_2, string seq_2, float* probDbl_2, int L2 )
+float nwdb_global_align_affinegaps( float* probDbl_1, int L1, float* probDbl_2, int L2 )
 {
-    float pnullij, psi_1, psi_2, delta, tau, omega_1, omega_2;
+    float tau;
     char ptr;
     float ** F, ** Q, ** P;
-    const float nullprob = 1e-5;
-
-    // length of shorter sequence
-    int minlen = ( L2 > L1 ) ? L1 : L2;
 
     // opening gap penalty
     float gapopen = alpha + beta;
@@ -350,7 +413,7 @@ float nwdb_global_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, f
       	P[ j ] = new float [ L1 + 1 ];
    	nwdp_initGap( P, L1, L2 );
 
-    // base pair similarity of bases pairing with nuc_1 and bases pairing with nuc_2
+   	// base pair similarity of bases pairing with nuc_1 and bases pairing with nuc_2
     for( int j = 1; j <= L2; j++ )
     {
     	for( int i = 1; i <= L1; i++ )
@@ -362,14 +425,11 @@ float nwdb_global_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, f
     		Q[ j ][ i ] = max3( INFINITE, F[ j ][ i-1 ] + gapopen, Q[ j ][ i-1 ] + beta, &ptr );
 
             // normalized log odds of base pair probabilities weighted by paired probabilities
-            pnullij = pnullDbl[ 4*nucIdx.at(nuc_1) + nucIdx.at(seq_1.at(i-1)) ];
-            psi_1 = ( probDbl_1[ i-1 ] <= nullprob ) ? log( nullprob / pnullij ) / log( 1 / pnullij ) : log( probDbl_1[ i-1 ] / pnullij ) / log( 1 / pnullij );
-            //psi_1 = probDbl_1[ i-1 ] / pnullij;
-            pnullij = pnullDbl[ 4*nucIdx.at(nuc_2) + nucIdx.at(seq_2.at(j-1)) ];
-            psi_2 = ( probDbl_2[ j-1 ] <= nullprob ) ? log( nullprob / pnullij ) / log( 1 / pnullij ) : log( probDbl_2[ j-1 ] / pnullij ) / log( 1 / pnullij );
-            //psi_2 = probDbl_2[ j-1 ] / pnullij;
-            delta = abs( psi_1 - psi_2 );
-            tau = ( delta < 1 ) ? 1 - delta : 0;
+            //delta = abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
+            ////cerr << i << " " << j << " " << nuc_1 << " " << nuc_2 << " " << probDbl_1[ i-1 ] << " " << probDbl_2[ j-1 ] << endl;
+            //tau = ( delta < 1 ) ? 1 - delta : 0;
+            tau = ( probDbl_1[ i-1 ]==0 || probDbl_2[ j-1 ]==0 ) ? 0 : 1 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
+            //cerr << i << " " << j << " " << probDbl_1[ i-1 ] << " " << probDbl_2[ j-1 ] << " " << tau << endl;
             //cerr << "DELTA " << delta << endl;
             //cerr << "TAU " << probDbl_1[ i-1 ] << " " << psi_1 << " " << probDbl_2[ j-1 ] << " " << psi_2 << " " << tau << endl;
 
@@ -377,20 +437,7 @@ float nwdb_global_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, f
             F[ j ][ i ] = max3( P[ j ][ i ], F[ j-1 ][ i-1 ] + tau, Q[ j ][ i ], &ptr );
         }
     }
-
-    // sequence similarity of nuc_1 and nuc_2
-    float sigma = 0;
-    if( kappa && nuc_1 == nuc_2 )
-    {
-    	omega_1 = ( probSgl_1 <= nullprob ) ? log( nullprob / pnullSgl[ nucIdx.at(nuc_1) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_1) ] ) : log( probSgl_1 / pnullSgl[ nucIdx.at(nuc_1) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_1) ] );
-    	//omega_1 = probSgl_1 / pnullSgl[ nucIdx.at(nuc_1) ];
-    	omega_2 = ( probSgl_2 <= nullprob ) ? log( nullprob / pnullSgl[ nucIdx.at(nuc_2) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_2) ] ) : log( probSgl_2 / pnullSgl[ nucIdx.at(nuc_2) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_2) ] );
-    	//omega_2 = probSgl_2 / pnullSgl[ nucIdx.at(nuc_2) ];
-    	delta = abs( omega_1 - omega_2 );
-    	sigma = ( delta < 1 ) ? 1 - delta : 0;
-    }
-    float similarity = kappa * sigma + ( 1 - kappa ) * F[ L2 ][ L1 ] / minlen;
-    //cerr << "SIGMA " << sigma << " " << probSgl_1 << " " << omega_1 << " " << probSgl_2 << " " << omega_2 << " F/minL " << F[ L2 ][ L1 ] / minlen << " SIM " << similarity << endl;
+	float score = F[ L2 ][ L1 ];
 
     // free memory
     for( int j = 0; j <= L2; j++ )  delete[] F[ j ];
@@ -400,16 +447,30 @@ float nwdb_global_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, f
     for( int j = 0; j <= L2; j++ )  delete[] P[ j ];
     delete[] P;
 
-    return similarity;
+    return score;
+}
+
+
+float nwdb_align_seq_sim( char nuc_1, float probSgl_1, char nuc_2, float probSgl_2 )
+{
+	// sequence similarity of nuc_1 and nuc_2
+	float sigma = 0;
+	if( nuc_1 == nuc_2 )
+	{
+		//delta = abs( probSgl_1 - probSgl_2 );
+		//cerr << nuc_1 << " " << probSgl_1 << " " << nuc_2 << " " << probSgl_2 << endl;
+		//sigma = ( delta < 1 ) ? 1 - delta : 0;
+		sigma = ( probSgl_1==0 || probSgl_2==0 ) ? 0 : 1 - abs( probSgl_1 - probSgl_2 );
+	}
+	return sigma;
 }
 
 
 float nwdb_local_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, float* probDbl_1, int L1, char nuc_2, float probSgl_2, string seq_2, float* probDbl_2, int L2, int * idx_1_local_aln, int * idx_2_local_aln, int & len_aln  )
 {
-    float pnullij, psi_1, psi_2, delta, tau, omega_1, omega_2;
+    float tau;
     char ptr;
     float ** F, ** Q, ** P;
-    const float nullprob = 1e-5;
     int i = 0, j = 0;
 
     // opening gap penalty
@@ -459,16 +520,11 @@ float nwdb_local_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, fl
             trQ[ j ][ i ] =  ptr;
 
             // normalized log odds of base pair probabilities weighted by paired probabilities
-            pnullij = pnullDbl[ 4*nucIdx.at(nuc_1) + nucIdx.at(seq_1.at(i-1)) ];
-            psi_1 = ( probDbl_1[ i-1 ] <= nullprob ) ? log( nullprob / pnullij ) / log( 1 / pnullij ) : log( probDbl_1[ i-1 ] / pnullij ) / log( 1 / pnullij );
-            //psi_1 = probDbl_1[ i-1 ] / pnullij;
-            pnullij = pnullDbl[ 4*nucIdx.at(nuc_2) + nucIdx.at(seq_2.at(j-1)) ];
-            psi_2 = ( probDbl_2[ j-1 ] <= nullprob ) ? log( nullprob / pnullij ) / log( 1 / pnullij ) : log( probDbl_2[ j-1 ] / pnullij ) / log( 1 / pnullij );
-            //psi_2 = probDbl_2[ j-1 ] / pnullij;
-            delta = abs( psi_1 - psi_2 );
-            tau = ( delta < 1 ) ? 1 - delta : 0;
+            //delta = abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
+            //tau = ( delta < 1 ) ? 1 - delta : 0;
+            tau = ( !probDbl_1[ i-1 ] && !probDbl_2[ j-1 ] ) ? 0 : 0.5 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
             //cerr << "DELTA " << delta << endl;
-            //cerr << "TAU " << probDbl_1[ i-1 ] << " " << psi_1 << " " << probDbl_2[ j-1 ] << " " << psi_2 << " " << tau << endl;
+            //cerr << "TAU " << probDbl_1[ i-1 ] << " " << nuc_1 << " " << probDbl_2[ j-1 ] << " " << nuc_2 << " " << tau << endl;
 
             // calculate F
             F[ j ][ i ] = max3( P[ j ][ i ], F[ j-1 ][ i-1 ] + tau, Q[ j ][ i ], &ptr );
@@ -563,17 +619,36 @@ float nwdb_local_align_affinegaps( char nuc_1, float probSgl_1, string seq_1, fl
 
     /* sequence similarity of nuc_1 and nuc_2 */
     float sigma = 0;
-    if( kappa && nuc_1 == nuc_2 )
+    //if( kappa && nuc_1 == nuc_2 )
+    if( kappa )
     {
-    	omega_1 = ( probSgl_1 <= nullprob ) ? log( nullprob / pnullSgl[ nucIdx.at(nuc_1) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_1) ] ) : log( probSgl_1 / pnullSgl[ nucIdx.at(nuc_1) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_1) ] );
-    	//omega_1 = probSgl_1 / pnullSgl[ nucIdx.at(nuc_1) ];
-    	omega_2 = ( probSgl_2 <= nullprob ) ? log( nullprob / pnullSgl[ nucIdx.at(nuc_2) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_2) ] ) : log( probSgl_2 / pnullSgl[ nucIdx.at(nuc_2) ] ) / log( 1 / pnullSgl[ nucIdx.at(nuc_2) ] );
-    	//omega_2 = probSgl_2 / pnullSgl[ nucIdx.at(nuc_2) ];
-    	delta = abs( omega_1 - omega_2 );
-    	sigma = ( delta < 1 ) ? 1 - delta : 0;
+    	//delta = abs( probSgl_1 - probSgl_2 );
+    	//sigma = ( delta < 1 ) ? 1 - delta : 0;
+    	//sigma -= 0.5;
+        sigma = ( !probSgl_1 && !probSgl_2 ) ? 0 : 0.5 - abs( probSgl_1 - probSgl_2 );
     }
     similarity = kappa * sigma + ( 1 - kappa ) * similarity / len_aln;
     //cerr << "SIGMA " << sigma << " " << probSgl_1 << " " << omega_1 << " " << probSgl_2 << " " << omega_2 << " F/minL " << F[ L2 ][ L1 ] / minlen << " SIM " << similarity << endl;
+
+//    if( prm ) {
+/*        cout << "\nDynamic programming matrix: " << endl;
+        float* tempidx_1 = new float[L1+1];
+        float* tempidx_2 = new float[L2+1];
+        for( int k = 0; k <= L1; k++ ) tempidx_1[ k ] = (float) k;
+        for( int k = 0; k <= L2; k++ ) tempidx_2[ k ] = (float) k;
+        cout << "F:" << endl;
+    	print_matrixdp( F, tempidx_1, L1, tempidx_2, L2);
+    	print_matrixdp( trF, tempidx_1, L1, tempidx_2, L2);
+        cout << "P:" << endl;
+    	print_matrixdp( P, tempidx_1, L1, tempidx_2, L2);
+    	print_matrixdp( trP, tempidx_1, L1, tempidx_2, L2);
+        cout << "Q:" << endl;
+    	print_matrixdp( Q, tempidx_1, L1, tempidx_2, L2);
+    	print_matrixdp( trQ, tempidx_1, L1, tempidx_2, L2);
+        free(tempidx_1);
+        free(tempidx_2);*/
+//    }
+
 
     /* free memory */
     for( int j = 0; j <= L2; j++ )  delete[] F[ j ];
@@ -1019,6 +1094,7 @@ bool compareBySimilarity(const LocalHit& a, const LocalHit& b)
 	return a.similarity < b.similarity;
 }
 
+
 /*
  * return overlap of the second interval by the first interval
  */
@@ -1042,7 +1118,40 @@ float getOverlap2ndInterval( int start_1, int end_1, int start_2, int end_2 )
 }
 
 
-void printalign(string & seq_1, int * idx_1_aln, string & seq_2, int * idx_2_aln, int len_aln )
+/*
+ * return normalized log odds of base pair probabilities weighted by paired probabilities
+ */
+void getlogoddsDbl( vector<float> & probDbl, string seq, int len, float pnull )
+{
+    for( int i = 0; i < len; i++ )
+    {
+    	int offset = i * len;
+    	for( int j = 0; j < len; j++ )
+    	{
+    		//pnullij = pnullDbl[ 4*nucIdx.at( seq.c_str()[ i ] ) + nucIdx.at( seq.c_str()[ j ] ) ];
+    		//probDbl[ offset + j ] = ( probDbl[ offset + j ] <= nullprob ) ? log( nullprob / pnullij ) / log( 1 / pnullij ) : log( probDbl[ offset + j ] / pnullij ) / log( 1 / pnullij );
+    		probDbl[ offset + j ] = max( 0, log( probDbl[ offset + j ] / pnull ) / log( 1 / pnull ) );
+    		//cerr << i << " " << " " << j << " " << probDbl[ offset + j ] << endl;
+    	}
+    }
+}
+
+
+/*
+ * return normalized log odds of unpaired probabilities weighted by probability of random occurrences of nucleotides
+ */
+void getlogoddsSgl( vector<float> & probSgl, string seq, int len, float pnull )
+{
+    for( int i = 0; i < len; i++ )
+    {
+    	//pnulli = pnullSgl[ nucIdx.at( seq.c_str()[ i ] ) ];
+    	//probSgl[ i ] = ( probSgl[ i ] <= nullprob ) ? log( nullprob / pnulli ) / log( 1 / pnulli ) : log( probSgl[ i ] / pnulli ) / log( 1 / pnulli );
+    	probSgl[ i ] = max( 0, log( probSgl[ i ] / pnull ) / log( 1 / pnull ) );
+    }
+}
+
+
+void printalign( string & seq_1, int * idx_1_aln, string & seq_2, int * idx_2_aln, int len_aln )
 {
 	int len_1 = seq_1.length();
 	int len_2 = seq_2.length();
