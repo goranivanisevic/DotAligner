@@ -1,0 +1,13 @@
+#!/bin/bash
+
+################################# SGE submission options  
+#$ -cwd                       	# Change to current working directory 
+#$ -V                         	# Export environment variables into script 
+#$ -S /bin/bash					# Enforce bash (don't touch!!!!)
+
+PAIRWISE_LIST='/home/marsmi/data/clustering/seed_10_55/pairwise.list'
+mkdir ${PAIRWISE_LIST%/*}/out
+#prints out the pairwise comparisons, replace qith $1,$2 for sequence names
+echo -n `head -n ${SGE_TASK_ID} $PAIRWISE_LIST | tail -n 1 | awk '{print $3,$4}'`" " > /tmp/${SGE_TASK_ID}.scores
+locarna --noLP --sequ-local=true --free-endgaps=R1,R2,L1,L2 `head -n ${SGE_TASK_ID} $PAIRWISE_LIST | tail -n 1 | awk '{print $1,$2}'` | grep "Score" | awk '{print $2}' >> /tmp/${SGE_TASK_ID}.scores
+mv /tmp/${SGE_TASK_ID}.scores ${PAIRWISE_LIST%/*}/out/
