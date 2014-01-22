@@ -51,22 +51,23 @@
 
 
 %at least 70 and at most 200 words
-\abstract{RNA molecules often function by their RNA secondary structure. Many
-short RNAs have characteristic global structures, such as the two sequential
-stem-loop structures of HACA snoRNAs. Long noncoding RNAs (lncRNAs) have
-important local structured RNA domains that are, for instance, recognized by RNA
-binding proteins. The discovery of functional RNA domains demands fast and
-accurate clustering approaches that are based on the structure landscape of RNA
-sequences. The gold standard of comparative RNA analysis, namely Sankoff-style
-simultaneous alignment and folding, is, however, not applicable. Here, we
-present a novel algorithm for RNA structure alignments that we named \dotaligner.
-The presented method optimizes the alignment of two RNA sequences with respect
-to all possible structures simultaneously, which allows the alignment of similar
-structured RNA domains of low sequence similarity.  The generated dissimilarity
-matrices are used to cluster RNA sequences in common structured RNA domains. The
-method was successfully tested on a selected set of HACA-box snoRNAs. It can
-contribute to the detection of functional RNA domains through its speed and very
-high specificity.}
+
+\abstract{A strong functional feature of many RNA molecules is their RNA
+secondary structure. Many short RNAs have characteristic global structures,
+such as the two sequential stem-loop structures of HACA snoRNAs. Long noncoding
+RNAs (lncRNAs) have important local structured RNA domains that are, for
+instance, recognized by RNA binding proteins. The discovery of functional RNA
+domains demands fast and accurate clustering approaches that are based on the
+structure landscape of RNA sequences. The gold standard of comparative RNA
+analysis, namely Sankoff-style simultaneous alignment and folding, is, however,
+not applicable. Here, we present a novel algorithm for RNA structure alignments
+that we named \dotaligner. The presented method optimizes the alignment of two
+RNA sequences with respect to all possible structures simultaneously, which
+allows the alignment of similar structured RNA domains of low sequence
+similarity. The generated dissimilarity matrices are used to cluster RNA
+sequences in common structured RNA domains. The method was successfully tested
+on a selected set of HACA-box snoRNAs. It can contribute to the detection of
+functional RNA domains through its speed and high specificity.}
 
 \onecolumn \maketitle \normalsize \vfill
 
@@ -98,7 +99,7 @@ For clustering of RNA domains a dissimilarity measurement of all pairs of query
 structures is needed. The dissimilarity is described through a pairwise weighted
 string alignment with arbitrary pairwise dependencies (for base pairings). The
 Needleman-Wunsch (2) algorithm solves the maximum weight string alignment
-problem by dynamic programming in $O(n^2)$ by preserving the sequence order and
+problem by dynamic programming in $O(N^2)$ by preserving the sequence order and
 maximizing the similarity. The consideration of pairs of nucleotides in each
 sequence that form intra-molecular interactions extends the problem to pairwise
 dependencies among positions in each string. This problem variant is
@@ -134,13 +135,12 @@ the approach applicable for clustering of large numbers of putative RNA domains.
 \section{\uppercase{Implementation}}
 
 \noindent The proposed algorithm makes the computationally complex problem of
-aligning two dotplots available by the iteration through a two step approach:
-(1) find dissimilarity (distance) of basepair probabilities of each nucleotide
-in sequence $S_a$ to each nucleotide in sequence $S_b$; and (2) find best path
-through the distance matrix generated in 1. The iteration is stopped when no
-more gaps are introduced in step 2. This algorithm runs in $O(n^2)$, hence, in
-the same time complexity as the sequence-based alignments.  In the following we
-discuss in detail how the algorithm works.
+aligning two dotplots available through a two step approach: (1) find
+dissimilarity (distance) of basepair probabilities of each nucleotide in
+sequence $S_a$ to each nucleotide in sequence $S_b$; and (2) find best path
+through the distance matrix generated in 1. This algorithm runs in $O(N^2)$,
+hence, in the same time complexity as the sequence-based alignments. In the
+following we discuss in detail how the algorithm works.
 
 As described in \cite{Palu2010} the weight $Z$ of alignment \emph{A} of two
 arc-annotated sequences $(S_a,P_a)$ and $(S_b,P_b)$ is defined by
@@ -171,7 +171,6 @@ solution is MAX-SNP-hard we implemented a heuristic of the alignment problem in
 \begin{algorithmic}
 %\begin{courier}
 \REQUIRE \begin{courier}$(S_a,P_a)$ of length $N$, $(S_b,P_b)$ of length $M$\end{courier}
-\REPEAT
 \STATE \begin{courier}\COMMENT{STEP 1: global alignment of pairing probabilities of each base in $S_a$ and $S_b$}\end{courier}
 \FOR{$i=1$ to $N$}
 \FOR{$i^\prime=1$ to $M$}
@@ -206,8 +205,6 @@ H_{ij} = max \begin{cases}
 \ENDFOR
 \ENDFOR
 \STATE $A(S_a,S_b) = BACKTRACKING(H)$
-\STATE Remove bases in $(S_a,P_a)$ and $(S_b,P_b)$ that align to gaps in $A(S_a,S_b)$ 
-\UNTIL gaps $\notin A(S_a,S_b)$
 %\end{courier}
 \end{algorithmic}
 \end{algorithm}
@@ -222,9 +219,7 @@ globally align two vectors of probabilities instead of two matrices which can
 be done by the Needleman-Wunsch algorithm. The actual alignments aren't needed
 in step 2, instead the two sequences are locally aligned by using the weights
 $Z(A|i,i^\prime)$ from step 1 as similarity scores, see equation \ref{eq3}. This
-can be done by the Smith-Waterman algorithm.  Both steps are repeated until no
-more gaps are introduced in step 2, thus, the same nucleotides in $S_a$ and
-$S_b$ are aligned in the last two iterations.  Then the final similarity of
+can be done by the Smith-Waterman algorithm. The final similarity of
 the two dotplots is calculated by
 
 \begin{equation}\label{eq4}
@@ -242,23 +237,22 @@ having a specific base pairing against the null model of a random pairing
 \cite{Will17432929}.  Here, we replace $P(i,j)$ with 
 
 \begin{equation}
-	\Psi_{i,j} = log \frac{P(i,j)}{p_0(i,j)} / log \frac{1}{p_0(i,j)} 
+	\Psi_{i,j} = max \left( 0, log \frac{P(i,j)}{p_0} / log \frac{1}{p_0} \right)
 \end{equation}
 
-where $p_0(i,j)$ is the expected probability for a pairing to occur at random
-(use ribosomal paired probability matrix
-\cite{Knudsen:Hein:RNA_secon_struc:1999}). The term $log \frac{1}{p_0(i,j)}$ is
-a normalization factor that transforms the scores to a maximum of 1. $P==1$
-results in $\Psi=1$, $P>p_0$ results in $\Psi>0$, $P==p_0$ results in $\Psi=0$,
-and $P<p_0$ results in $\Psi^*\le\Psi<0$ where $\Psi^*$ is a lower boundary.
-This transformation gives weaker similarities if low basepair probabilities are
-compared, but stronger similarities for high basepair probabilities. The
-similarity $\tau$ is then calculate by
+where $p_0$ is the expected probability for a pairing to occur at random. The
+term $log \frac{1}{p_0(i,j)}$ is a normalization factor that transforms the
+scores to a maximum of 1. $P==1$ results in $\Psi=1$, $P>p_0$ results in
+$\Psi>0$, and $P\le p_0$ results in $\Psi=0$.  This transformation gives weaker
+similarities if low basepair probabilities are compared, but stronger
+similarities for high basepair probabilities. The similarity $\tau$ is then
+calculate by
 
 \begin{equation}
 	\tau(i,j,i^\prime,j^\prime) = \left\{ \begin{array}{cl}
-			1 - \delta(i,j,i^\prime,j^\prime) & \textrm{if }\delta(i,j,i^\prime,j^\prime) < 1 \\
-			0 & \textrm{else}
+			0 & \textrm{if }\Psi(i,j) == 0 \\
+			  & \textrm{and } \Psi(i^\prime,j^\prime) == 0 \\
+			1 - \delta(i,j,i^\prime,j^\prime) & \textrm{else}
 		\end{array}\right.
 \end{equation}
 
@@ -268,21 +262,20 @@ so that $\tau = (0,1)$.
 Unpaired probabilities are handled in a similar way by
 
 \begin{equation}
-	\omega(i) = log \frac{1 - \sum_k P(i,k)}{p_0(i)} / log \frac{1}{p_0(i)}
+	\omega(i) = max \left( 0, log \frac{1 - \sum_k P(i,k)}{p_0} / log \frac{1}{p_0} \right)
 \end{equation}
 
 where $p_0(i)$ is the expected probability for an unpaired base to occur at
-random (use ribosomal unpaired probabilities
-\cite{Knudsen:Hein:RNA_secon_struc:1999}). Our model is based on structure
-similarity, however, the sequence similarity $\sigma$ may be especially
-important in unpaired regions, \eg{} as accessible sequence-specific binding
-motif.  Therefore, we weight matching nucleotides by the similarity of their
-unpaired probabilities:
+random. Our model is based on structure similarity, however, the sequence
+similarity $\sigma$ may be especially important in unpaired regions, \eg{} as
+accessible sequence-specific binding motif.  Therefore, we weight matching
+nucleotides by the similarity of their unpaired probabilities:
 
 \begin{equation}
 	\sigma(i,i^\prime) = \left\{ \begin{array}{cl}
-			1 - \delta(i,i^\prime) & \textrm{if }i == i^\prime \textrm{ and } \delta(i,i^\prime) < 1 \\
-			0 & \textrm{else}
+			0 & \textrm{if } \omega(i) == 0 \\
+			  & \textrm{and } \omega(i^\prime ) == 0 \\
+			1 - \delta(i,i^\prime) & \textrm{else}
 		\end{array}\right.
 \end{equation}
 
@@ -304,7 +297,7 @@ all gaps (optimize $\alpha$ and $\beta$)
 \subsection{Speed up}
 
 To achieve a very fast method that can be applied on a large amount of pairwise
-comparisons, \eg{} a set of 2,000 RNA sequences requires $2 \times 10^6$
+comparisons, \eg{} a set of 2,000 RNA sequences requires $2 \times 10^6 - 1,000$
 comparisons, we implemented two complementary strategies:
 \begin{enumerate}
 \item set maximal allowed shift of two input sequences in the final alignment
@@ -319,22 +312,6 @@ them to sequence 2. As soon as the first seed alignment has a gap-free alignment
 above a given threshold then the entire sequences are aligned around the already
 calculated similarities. If all seed alignments fail the program is stopped and
 a similarity of 0 is returned.
-
-
-\subsection{Local alignments}
-
-The so far presented approach finds only semi-local alignments, meaning the
-heuristic in the first step of the algorithm gives global alignments, whereas
-the second step provides a final local alignment. This strategy is applicable
-for input sequences of similar lengths, however, a real local alignment is
-necessary if input sequences are very long or have different lengths. Finding
-the optimal local alignment common to all pairs of pairing probabilities in step
-1 is again NP-hard, why we apply another heuristic. In step 1 we find the
-optimal local alignment for each pair of pairing probabilities that includes the
-two reference bases. Then for each optimal local alignment we run for its two
-subsequences step 1 with global alignments, and after that step 2 on the
-distances of the two subsequences. This results in a number of local alignments
-that can be sorted by their similarity.
 
 
 \section{\uppercase{Results}}
@@ -500,15 +477,20 @@ Local alignment, simulating genomic screens. More emphasis on qualitative cluste
 \section{\uppercase{Discussion}}
 
 \noindent We plan to integrate the proposed method in a pipeline that screens
-regions of interest for structured RNA domains in a collection of RNA molecules.
-The pipeline may comprise window based thermodynamic folding, \eg{} by
-\rnaplfold{} \cite{Bernhart:Hofacker:Stadler:Local_RNA_base:2006}, the
-identification of regions of high intra-molecular binding probabilities, \eg{}
-\rnalocal{} \cite{Dotu19908358}, followed by the presented alignment tool
-\dotaligner. The pre-selection of local structural potential is necessary
-because \dotaligner{} finds only semi-local alignments, meaning the heuristic in
-the first step of the algorithm gives global alignment, whereas the second step
-provides a final local alignment. 
+regions of interest for structured RNA domains in a collection of RNA
+molecules.  The so far presented approach finds only semi-local alignments,
+meaning the heuristic in the first step of the algorithm gives global
+alignments, whereas the second step provides a final local alignment. This
+strategy is applicable for input sequences of similar lengths, however, a real
+local alignment is necessary if input sequences are very long or have different
+lengths.  Hence, a possible screening pipeline may comprise window based
+thermodynamic folding, \eg{} by \rnaplfold{}
+\cite{Bernhart:Hofacker:Stadler:Local_RNA_base:2006}, the identification of
+regions of high intra-molecular binding probabilities, \eg{} \rnalocal{}
+\cite{Dotu19908358}, followed by the presented alignment tool \dotaligner. The
+pre-selection of local structural potential is necessary because \dotaligner{}
+finds only semi-local alignments but local alignments may improve the
+boundaries of common structured RNA domain. 
 
 \dotaligner{} can also be extended for multiple alignments, similar to the strategy
 implemented in \pmmulti{} \cite{Hofacker15073017}, and the generation of
@@ -516,14 +498,6 @@ phylogenetic trees. This may replace or support the hierarchical clustering
 approach used here. In addition, both may serve as input for RNA secondary
 structure predictors, such as \petfold{} \cite{Seemann2008} unifying
 thermodynamic and evolutionary information. 
-
-The first step of the algorithm could also implement local alignments. In this
-case, however, the input basepair probabilities should be calculated in a
-sliding-window approach, such as provided by \rnaplfold.  Then step 2 has to
-find the best local alignment of local pairwise alignments from step 1 where the
-paired bases are overlapping.  The search for overlapping local alignments from
-step 1 will increase the running time exponentially, but local alignments may
-improve the boundaries of common structured RNA domains.
 
 
 \section*{\uppercase{Acknowledgements}}
