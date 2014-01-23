@@ -167,9 +167,9 @@ float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, 
     	float* subprob_2u = new float[idx_2];
 
     	for( int i = 0; i < idx_1; i++ )
-    		subprob_1u[ i ] = probDbl_1.at( sidx_1 + idx_1_aln[ i ] );
+    		subprob_1u[ i ] = probDbl_1.at( sidx_1 + idx_1_aln[ idx_1 - 1 - i ] );
    		for( int j = 0; j < idx_2; j++ )
-   			subprob_2u[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ j ] );
+   			subprob_2u[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ idx_2 - 1 - j ] );
    		tau = nwdb_global_align_affinegaps( subprob_1u, idx_1, subprob_2u, idx_2 );
 
    		delete[] subprob_1u;
@@ -182,20 +182,23 @@ float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, 
 		float* subprob_2d = new float[len_2-idx_2-1];
 
 		for( int i = 0; i < len_1-idx_1-1; i++ )
-			subprob_1d[ i ] = probDbl_1.at( sidx_1 + idx_1_aln[ idx_1+i+1 ] );
+			subprob_1d[ i ] = probDbl_1.at( sidx_1 + idx_1_aln[ idx_1 + i + 1 ] );
 		for( int j = 0; j < len_2-idx_2-1; j++ )
-			subprob_2d[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ idx_2+j+1 ] );
+			subprob_2d[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ idx_2 + j + 1 ] );
 		tau += nwdb_global_align_affinegaps( subprob_1d, len_1-idx_1-1, subprob_2d, len_2-idx_2-1 );
 
 		delete[] subprob_1d;
 	    delete[] subprob_2d;
     }
 
-    // length of shorter sequence
+    /* length of shorter sequence */
     int minlen = ( len_2 > len_1 ) ? len_1 : len_2;
+
+    /* sequence similarity */
    	float sigma = nwdb_align_seq_sim( seq_1.c_str()[idx_1], probSgl_1.at(idx_1), seq_2.c_str()[idx_2], probSgl_2.at(idx_2) );
+
    	sim = kappa * sigma + ( 1 - kappa ) * tau / ( minlen - 1 );
-   	//cerr << idx_1 << " " << idx_2 << " " << sigma << " " << tau / ( minlen - 1 ) << " " << sim << endl;
+   	//cerr << idx_1 << " " << idx_2 << " " << sigma << " " << tau << " " << minlen << " " << tau / ( minlen - 1 ) << " " << sim << endl;
 
    	delete[] subprob_1;
    	delete[] subprob_2;
@@ -303,13 +306,32 @@ float nwdb_global_align_affinegaps( float* probDbl_1, int L1, float* probDbl_2, 
     		// calculate Q
     		Q[ j ][ i ] = max3( INFINITE, F[ j ][ i-1 ] + gapopen, Q[ j ][ i-1 ] + beta, &ptr );
 
-            tau = ( probDbl_1[ i-1 ]==0 && probDbl_2[ j-1 ]==0 ) ? 0 : 1 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
-            //cerr << i << " " << j << " " << probDbl_1[ i-1 ] << " " << probDbl_2[ j-1 ] << " " << tau << endl;
+            tau = ( probDbl_1[ i-1 ]==0 || probDbl_2[ j-1 ]==0 ) ? 0 : 1 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
+    		/*float psi = 0.1;
+    		if( probDbl_1[ i-1 ]==0 )
+    			if( probDbl_2[ j-1 ]==0 )
+    				tau = psi;
+    			else
+    				tau = ( probDbl_2[ j-1 ] < psi ) ? psi - probDbl_2[ j-1 ] : 0;
+    		else
+    			if( probDbl_2[ j-1 ]==0 )
+    				tau = ( probDbl_1[ i-1 ] < psi ) ? psi - probDbl_1[ i-1 ] : 0;*/
+
+           //cerr << i << " " << j << " " << probDbl_1[ i-1 ] << " " << probDbl_2[ j-1 ] << " " << tau << endl;
 
             // calculate F
             F[ j ][ i ] = max3( P[ j ][ i ], F[ j-1 ][ i-1 ] + tau, Q[ j ][ i ], &ptr );
         }
+
 	float score = F[ L2 ][ L1 ];
+
+	// find score without end gaps
+	for( int j = 1; j <= L2; j++ )
+		if( score < F[ j ][ L1 ] )
+			score = F[ j ][ L1 ];
+	for( int i = 1; i <= L1; i++ )
+		if( score < F[ L2 ][ i ] )
+			score = F[ L2 ][ i ];
 
     // free memory
     for( int j = 0; j <= L2; j++ )  delete[] F[ j ];
@@ -330,7 +352,8 @@ float nwdb_align_seq_sim( char nuc_1, float probSgl_1, char nuc_2, float probSgl
 {
 	float sigma = 0;
 	if( nuc_1 == nuc_2 )
-		sigma = ( probSgl_1==0 && probSgl_2==0 ) ? 0 : 1 - abs( probSgl_1 - probSgl_2 );
+		sigma = ( probSgl_1==0 || probSgl_2==0 ) ? 0 : 1 - abs( probSgl_1 - probSgl_2 );
+
 	return sigma;
 }
 
@@ -638,10 +661,10 @@ void getlogoddsDbl( vector<float> & probDbl, string seq, int len, float pnull )
     	int offset = i * len;
     	for( int j = 0; j < len; j++ )
     	{
-    		//pnullij = pnullDbl[ 4*nucIdx.at( seq.c_str()[ i ] ) + nucIdx.at( seq.c_str()[ j ] ) ];
-    		//probDbl[ offset + j ] = ( probDbl[ offset + j ] <= nullprob ) ? log( nullprob / pnullij ) / log( 1 / pnullij ) : log( probDbl[ offset + j ] / pnullij ) / log( 1 / pnullij );
+    		//float pnullij = pnullDbl[ 4*nucIdx.at( seq.c_str()[ i ] ) + nucIdx.at( seq.c_str()[ j ] ) ];
+    		//probDbl[ offset + j ] = ( probDbl[ offset + j ] <= pnull ) ? log( pnull / pnullij ) / log( 1 / pnullij ) : log( probDbl[ offset + j ] / pnullij ) / log( 1 / pnullij );
+    		//probDbl[ offset + j ] = ( probDbl[ offset + j ] <= pnullij ) ? 0 : log( probDbl[ offset + j ] / pnullij ) / log( 1 / pnullij );
     		probDbl[ offset + j ] = max( 0, log( probDbl[ offset + j ] / pnull ) / log( 1 / pnull ) );
-    		//cerr << i << " " << " " << j << " " << probDbl[ offset + j ] << endl;
     	}
     }
 }
@@ -654,8 +677,9 @@ void getlogoddsSgl( vector<float> & probSgl, string seq, int len, float pnull )
 {
     for( int i = 0; i < len; i++ )
     {
-    	//pnulli = pnullSgl[ nucIdx.at( seq.c_str()[ i ] ) ];
-    	//probSgl[ i ] = ( probSgl[ i ] <= nullprob ) ? log( nullprob / pnulli ) / log( 1 / pnulli ) : log( probSgl[ i ] / pnulli ) / log( 1 / pnulli );
+    	//float pnulli = pnullSgl[ nucIdx.at( seq.c_str()[ i ] ) ];
+    	//probSgl[ i ] = ( probSgl[ i ] <= pnull ) ? log( pnull / pnulli ) / log( 1 / pnulli ) : log( probSgl[ i ] / pnulli ) / log( 1 / pnulli );
+    	//probSgl[ i ] = ( probSgl[ i ] <= pnulli ) ? 0 : log( probSgl[ i ] / pnulli ) / log( 1 / pnulli );
     	probSgl[ i ] = max( 0, log( probSgl[ i ] / pnull ) / log( 1 / pnull ) );
     }
 }

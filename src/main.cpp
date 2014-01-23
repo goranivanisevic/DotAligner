@@ -192,7 +192,18 @@ int main( int argc, char ** argv )
 
         /* reduce depth of probability matrices */
         reducematrix(probDbl_1, len_1*len_1, precision);
+        /*for( int i=0; i<len_1; i++ ) {
+       	 for( int j=0; j<len_1; j++ )
+       		 cerr << probDbl_1.at( i*len_1+j ) << "\t";
+       	 cerr << endl;
+        }*/
+        cerr << endl;
         reducematrix(probDbl_2, len_2*len_2, precision);
+        /*for( int i=0; i<len_2; i++ ) {
+       	 for( int j=0; j<len_2; j++ )
+       		 cerr << probDbl_2.at( i*len_2+j ) << "\t";
+       	 cerr << endl;
+        }*/
         reducematrix(probSgl_1, len_1, precision);
         reducematrix(probSgl_2, len_2, precision);
 
@@ -205,7 +216,7 @@ int main( int argc, char ** argv )
 		for( int i=0; i<len_2; i++ ) idx_2_aln[ i ] = i;
 
 		/* repeat alignment until no changes in alignment */
-		//while( len_1_last != len_aln || len_2_last != len_aln )
+		//while( len_1_last != len_aln || len_2_last != len_aln ) {
 
 		/* STEP 1: global alignment (Needleman-Wunsch algorithm) of pairing probabilities of each base in S_a and S_b */
 		float **sim = new float*[ len_2 ];
@@ -323,6 +334,7 @@ int main( int argc, char ** argv )
 		int *tmp_idx_1_aln = new int[len_1];
 		int *tmp_idx_2_aln = new int[len_2];
 		simalign_affinegaps( sim, len_1, len_2, tmp_idx_1_aln, tmp_idx_2_aln, len_aln, precision, setglobal2_flag, setprintmatrix_flag);
+
 		for( int i=0; i<len_aln; i++ ) {
 			idx_1_aln[ i ] = idx_1_aln[ tmp_idx_1_aln[ i ] ];
 			idx_2_aln[ i ] = idx_2_aln[ tmp_idx_2_aln[ i ] ];
@@ -350,12 +362,19 @@ int main( int argc, char ** argv )
 
 		/* calculate final similarity */
 		float similarity = 0.;
-		for( int i=0; i<len_aln; i++ )
-			similarity += nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[i], idx_1_aln, len_aln, seq_2, probDbl_2, probSgl_2, idx_2_aln[i], idx_2_aln, len_aln, setprintmatrix_flag );
+		float tmp;
+		for( int i=0; i<len_aln; i++ ) {
+			//similarity += nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[i], idx_1_aln, len_aln, seq_2, probDbl_2, probSgl_2, idx_2_aln[i], idx_2_aln, len_aln, setprintmatrix_flag );
+			tmp =  nwdp( seq_1, probDbl_1, probSgl_1, idx_1_aln[i], idx_1_aln, len_aln, seq_2, probDbl_2, probSgl_2, idx_2_aln[i], idx_2_aln, len_aln, setprintmatrix_flag );
+			similarity += tmp;
+			cout << i << " " << tmp << endl;
+		}
 		int open = 0, extended = 0;
 		affinegapcosts(idx_1_aln, idx_2_aln, len_aln, open, extended);
 		//similarity = ( len_1_aln ) ? ( similarity + alpha * ( len_1 + len_2 - len_1_aln - len_1_aln ) ) / len_1_aln : 0;
-		similarity = ( len_aln ) ? ( similarity + alpha * open + beta * extended ) / ( len_aln + extended ) : 0;
+		cout << similarity << " " << alpha*open << " " << beta*extended << " " << len_aln << " " << extended << endl;
+		//similarity = ( len_aln ) ? ( similarity + alpha * open + beta * extended ) / ( len_aln + extended ) : 0;
+		similarity = ( len_aln ) ? ( similarity + alpha * open + beta * extended ) / len_aln : 0;
 
 		/* OUTPUT */
 
