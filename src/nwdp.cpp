@@ -124,25 +124,27 @@ void reducematrix(vector<float> & prob, int len, int precision)
    \param[seq_1]  sequence 1 ( S_a )
    \param[probDbl_1]  pairing probabilities of S_a (dot plot)
    \param[probSgl_1]  unpaired probabilities of S_a
-   \param[idx_1]  index of reference nucleotide of S_a
+   \param[rel_idx_1]  index of reference nucleotide of S_a in vector idx_1_aln
    \param[idx_1_aln]  indices of nucleotides in the subsequence of S_a that is considered for alignment ( SS_a )
    \param[len_1] length of considered subsequence SS_a
    \param[seq_2]  sequence 2 ( S_b )
    \param[probDbl_2]  pairing probabilities of S_b (dot plot)
    \param[probSgl_2]  unpaired probabilities of S_b
-   \param[idx_2]  index of reference nucleotide of S_b
+   \param[rel_idx_2]  index of reference nucleotide of S_b in vector idx_2_aln
    \param[idx_2_aln]  indices of nucleotides in the subsequence of S_b that is considered for alignment ( SS_b )
    \param[len_2] length of considered subsequence SS_b
    \param[prm]  boolean if dynamic programming matrices are printed
 
    \returns  Similarity score ( 0 .. 1 )
 */
-float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int idx_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int idx_2, int * idx_2_aln, int len_2, bool prm )
+float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int rel_idx_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int rel_idx_2, int * idx_2_aln, int len_2, bool prm )
 {
     float sim;
     float* subprob_1 = new float[len_1];
     float* subprob_2 = new float[len_2];
     string subseq_1, subseq_2;
+    int idx_1 = idx_1_aln[ rel_idx_1 ];
+    int idx_2 = idx_2_aln[ rel_idx_2 ];
 
     int sidx_1 = idx_1 * seq_1.length();
     int sidx_2 = idx_2 * seq_2.length();
@@ -160,35 +162,54 @@ float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, 
 
     /* create global alignment */
    	float tau = 0;
-   	/* alignment upstream of the constraint pair ( idx_1, idx_2 ) */
-   	if( idx_1 > 0 && idx_2 > 0 )
+
+   	//tau = nwdb_constraint_global_align_affinegaps( subprob_1, probSgl_1, len_1, rel_idx_1, subprob_2, probSgl_2, len_2, rel_idx_2 );
+
+   	/* alignment upstream of the constraint pair ( rel_idx_1, rel_idx_2 ) */
+   	if( rel_idx_1 > 0 && rel_idx_2 > 0 )
    	{
-    	float* subprob_1u = new float[idx_1];
-    	float* subprob_2u = new float[idx_2];
+    	float* subprobDbl_1u = new float[ rel_idx_1 ];
+    	float* subprobDbl_2u = new float[ rel_idx_2 ];
+    	float* subprobSgl_1u = new float[ rel_idx_1 ];
+    	float* subprobSgl_2u = new float[ rel_idx_2 ];
 
-    	for( int i = 0; i < idx_1; i++ )
-    		subprob_1u[ i ] = probDbl_1.at( sidx_1 + idx_1_aln[ idx_1 - 1 - i ] );
-   		for( int j = 0; j < idx_2; j++ )
-   			subprob_2u[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ idx_2 - 1 - j ] );
-   		tau = nwdb_global_align_affinegaps( subprob_1u, idx_1, subprob_2u, idx_2 );
+    	for( int i = 0; i < rel_idx_1; i++ ) {
+    		subprobDbl_1u[ i ] = probDbl_1.at( sidx_1 + idx_1_aln[ rel_idx_1 - 1 - i ] );
+    		subprobSgl_1u[ i ] = probSgl_1.at( idx_1_aln[ rel_idx_1 - 1 - i ] );
+    	}
+   		for( int j = 0; j < rel_idx_2; j++ ) {
+   			subprobDbl_2u[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ rel_idx_2 - 1 - j ] );
+    		subprobSgl_2u[ j ] = probSgl_2.at( idx_2_aln[ rel_idx_2 - 1 - j ] );
+    	}
+   		tau = nwdb_global_align_affinegaps( subprobDbl_1u, subprobSgl_1u, rel_idx_1, subprobDbl_2u, subprobSgl_2u, rel_idx_2 );
 
-   		delete[] subprob_1u;
-        delete[] subprob_2u;
+   		delete[] subprobDbl_1u;
+        delete[] subprobDbl_2u;
+        delete[] subprobSgl_1u;
+        delete[] subprobSgl_2u;
     }
-    /* alignment downstream of the constraint pair ( idx_1, idx_2 ) */
-    if( idx_1<len_1-1 && idx_2<len_2-1 )
+    /* alignment downstream of the constraint pair ( rel_idx_1, rel_idx_2 ) */
+    if( rel_idx_1<len_1-1 && rel_idx_2<len_2-1 )
     {
-		float* subprob_1d = new float[len_1-idx_1-1];
-		float* subprob_2d = new float[len_2-idx_2-1];
+		float* subprobDbl_1d = new float[ len_1 - rel_idx_1 - 1 ];
+		float* subprobDbl_2d = new float[ len_2 - rel_idx_2 - 1 ];
+    	float* subprobSgl_1d = new float[ len_1 - rel_idx_1 - 1 ];
+    	float* subprobSgl_2d = new float[ len_2 - rel_idx_2 - 1 ];
 
-		for( int i = 0; i < len_1-idx_1-1; i++ )
-			subprob_1d[ i ] = probDbl_1.at( sidx_1 + idx_1_aln[ idx_1 + i + 1 ] );
-		for( int j = 0; j < len_2-idx_2-1; j++ )
-			subprob_2d[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ idx_2 + j + 1 ] );
-		tau += nwdb_global_align_affinegaps( subprob_1d, len_1-idx_1-1, subprob_2d, len_2-idx_2-1 );
+		for( int i = 0; i < len_1 - rel_idx_1 - 1; i++ ) {
+			subprobDbl_1d[ i ] = probDbl_1.at( sidx_1 + idx_1_aln[ rel_idx_1 + i + 1 ] );
+			subprobSgl_1d[ i ] = probSgl_1.at( idx_1_aln[ rel_idx_1 + i + 1 ] );
+		}
+		for( int j = 0; j < len_2 - rel_idx_2 - 1; j++ ) {
+			subprobDbl_2d[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ rel_idx_2 + j + 1 ] );
+    		subprobSgl_2d[ j ] = probSgl_2.at( idx_2_aln[ rel_idx_2 + j +1 ] );
+		}
+		tau += nwdb_global_align_affinegaps( subprobDbl_1d, subprobSgl_1d, len_1 - rel_idx_1 - 1, subprobDbl_2d, subprobSgl_2d, len_2 - rel_idx_2 - 1 );
 
-		delete[] subprob_1d;
-	    delete[] subprob_2d;
+		delete[] subprobDbl_1d;
+	    delete[] subprobDbl_2d;
+        delete[] subprobSgl_1d;
+        delete[] subprobSgl_2d;
     }
 
     /* length of shorter sequence */
@@ -198,7 +219,8 @@ float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, 
    	float sigma = nwdb_align_seq_sim( seq_1.c_str()[idx_1], probSgl_1.at(idx_1), seq_2.c_str()[idx_2], probSgl_2.at(idx_2) );
 
    	sim = kappa * sigma + ( 1 - kappa ) * tau / ( minlen - 1 );
-   	//cerr << idx_1 << " " << idx_2 << " " << sigma << " " << tau << " " << minlen << " " << tau / ( minlen - 1 ) << " " << sim << endl;
+   	//sim = kappa * sigma + ( 1 - kappa ) * tau;
+   	//cerr << idx_1 << " " << idx_2 << " " << sigma << " " << tau << " " << minlen << " " << ( tau / minlen ) << " " << sim << endl;
 
    	delete[] subprob_1;
    	delete[] subprob_2;
@@ -252,10 +274,13 @@ void nwdp_initGap( float ** Q, int L1, int L2 )
 {
 	Q[ 0 ][ 0 ] =  0. ;
 
-    for( int i = 1; i <= L1; i++ )
+    /*for( int i = 1; i <= L1; i++ )
      	Q[ 0 ][ i ] =  INFINITE;
     for( int j = 1; j <= L2; j++ )
-      	Q[ j ][ 0 ] =  INFINITE;
+      	Q[ j ][ 0 ] =  INFINITE;*/
+	for( int j = 0; j <= L2; j++ )
+		for( int i = 0; i <= L1; i++ )
+			Q[ j ][ i ] = INFINITE;
 }
 
 
@@ -271,11 +296,139 @@ void nwdp_initTB( char ** traceback, int L1, int L2 )
 }
 
 
-float nwdb_global_align_affinegaps( float* probDbl_1, int L1, float* probDbl_2, int L2 )
+float nwdb_global_align_affinegaps( float* probDbl_1, float* probSgl_1, int L1, float* probDbl_2, float* probSgl_2, int L2 )
 {
-    float tau;
+    float tau, sigma;;
     char ptr;
     float ** F, ** Q, ** P;
+    float score;
+
+    /* opening gap penalty */
+    float gapopen = alpha + beta;
+
+    /* Initialize dynamic programming matrix F (fill in first row and column) */
+    F = new float * [ L2 + 1  ];
+    for( int j = 0; j <= L2; j++ )
+    	F[ j ] = new float [ L1 + 1 ];
+    nwdp_initF_affinegaps( F, L1, L2, 1 );
+
+    /* Initialize Q and P matrices for cost of alignments that end with a gap */
+    Q = new float * [ L2 + 1  ];
+    for( int j = 0; j <= L2; j++ )
+    	Q[ j ] = new float [ L1 + 1 ];
+    nwdp_initGap( Q, L1, L2 );
+
+    P = new float * [ L2 + 1  ];
+    for( int j = 0; j <= L2; j++ )
+      	P[ j ] = new float [ L1 + 1 ];
+   	nwdp_initGap( P, L1, L2 );
+
+    /* Traceback matrices */
+    char ** trF = new char * [ L2+1 ];
+    for( int j = 0; j <= L2; j++ )
+    	trF[ j ] = new char [ L1+1 ];
+    nwdp_initTB( trF, L1, L2 );
+    char ** trQ = new char * [ L2+1 ];
+    for( int j = 0; j <= L2; j++ )
+    	trQ[ j ] = new char [ L1+1 ];
+    nwdp_initTB( trQ, L1, L2 );
+    char ** trP = new char * [ L2+1 ];
+    for( int j = 0; j <= L2; j++ )
+    	trP[ j ] = new char [ L1+1 ];
+    nwdp_initTB( trP, L1, L2 );
+
+   	/* base pair similarity of bases pairing with nuc_1 and bases pairing with nuc_2 */
+   	int j, i;
+    for( j = 1; j <= L2; j++ )
+    	for( i = 1; i <= L1; i++ )
+        {
+			// calculate P
+			P[ j ][ i ] = max3( P[ j-1 ][ i ] + beta, F[ j-1 ][ i ] + gapopen, INFINITE, &ptr );
+            trP[ j ][ i ] =  ptr;
+
+			// calculate Q
+			Q[ j ][ i ] = max3( INFINITE, F[ j ][ i-1 ] + gapopen, Q[ j ][ i-1 ] + beta, &ptr );
+            trQ[ j ][ i ] =  ptr;
+
+			// calculate F
+			tau = ( probDbl_1[ i-1 ]==0 && probDbl_2[ j-1 ]==0 ) ? 0 : 0.5 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
+    		tau *= ( 1 - kappa );
+    		sigma = ( probSgl_1[ i-1 ]==0 && probSgl_2[ j-1 ]==0 ) ? 0 : 0.5 - abs( probSgl_1[ i-1 ] - probSgl_2[ j-1 ] );
+    		tau += kappa * sigma;
+			F[ j ][ i ] = max3( P[ j ][ i ], F[ j-1 ][ i-1 ] + tau, Q[ j ][ i ], &ptr );
+            trF[ j ][ i ] =  ptr;
+        }
+	j--; i--;
+    score = F[ j ][ i ];
+
+    /* remove 3' tail gaps */
+    bool tail = 0;
+    int maxmat = 0;  // 0 .. F; 1 .. P; 2 .. Q
+    while( i > 0 || j > 0 )
+    {
+    	if( tail )
+    		break;
+
+    	switch( maxmat )
+    	{
+    		case 0 : switch( trF[ j ][ i ] )
+    				 {
+        			 	 case '|' : maxmat = 1;
+        			 	 	 	 	break;
+        			 	 case '\\': tail = 1;
+        			 	 	        break ;
+        			 	 case '-' : maxmat = 2;
+        			 	 	 	 	break;
+    				 }
+    				 break;
+    		 case 1: switch( trP[ j ][ i ] )
+    				 {
+    		 	 	 	 case '|' : j--;
+    		 	 	 	 	 	 	break;
+    		 	 	 	 case '\\': maxmat = 0;
+    		 	 	 	 	 	 	j--;
+    		 	 	 	 	 	 	break;
+    				 }
+    				 break;
+    		 case 2: switch( trQ[ j ][ i ] )
+    		 	 	 {
+ 	 	 	 	 	 	 case '\\': maxmat = 0;
+ 	 	 	 	 	 	 	 	 	i--;
+ 	 	 	 	 	 	 	 	 	break;
+ 	 	 	 	 	 	 case '-' : i--;
+ 	 	 	 	 	 	 	 	 	break;
+    		 	 	 }
+    		 	 	 break;
+    	}
+    }
+	/* update score without 3' tail gaps */
+    score = F[ j ][ i ];
+    //cerr << "trF " << i << " " << j << " " << score << " " << F[ L2 ][ L1 ] << endl;
+
+    /* free memory */
+    for( int j = 0; j <= L2; j++ )  delete[] F[ j ];
+  	delete[] F;
+    for( int j = 0; j <= L2; j++ )  delete[] Q[ j ];
+    delete[] Q;
+    for( int j = 0; j <= L2; j++ )  delete[] P[ j ];
+    delete[] P;
+    for( int j = 0; j <= L2; j++ )  delete trF[ j ];
+    delete[] trF;
+    for( int j = 0; j <= L2; j++ )  delete trP[ j ];
+    delete[] trP;
+    for( int j = 0; j <= L2; j++ )  delete trQ[ j ];
+    delete[] trQ;
+
+    return score;
+}
+
+
+float nwdb_constraint_global_align_affinegaps( float* probDbl_1, vector<float> & probSgl_1, int L1, int constr_1, float* probDbl_2, vector<float> & probSgl_2, int L2, int constr_2 )
+{
+    float tau, sigma;
+    char ptr;
+    float ** F, ** Q, ** P;
+    float score;
 
     // opening gap penalty
     float gapopen = alpha + beta;
@@ -284,54 +437,132 @@ float nwdb_global_align_affinegaps( float* probDbl_1, int L1, float* probDbl_2, 
     F = new float * [ L2 + 1  ];
     for( int j = 0; j <= L2; j++ )
     	F[ j ] = new float [ L1 + 1 ];
-    nwdp_initF_affinegaps( F, L1, L2, 0 );
+    nwdp_initF_affinegaps( F, L1, L2, 1 );
 
     // Initialize Q and P matrices for cost of alignments that end with a gap
     Q = new float * [ L2 + 1  ];
     for( int j = 0; j <= L2; j++ )
     	Q[ j ] = new float [ L1 + 1 ];
     nwdp_initGap( Q, L1, L2 );
+
     P = new float * [ L2 + 1  ];
     for( int j = 0; j <= L2; j++ )
       	P[ j ] = new float [ L1 + 1 ];
    	nwdp_initGap( P, L1, L2 );
 
+    /* Traceback matrices */
+    char ** trF = new char * [ L2+1 ];
+    for( int j = 0; j <= L2; j++ )
+    	trF[ j ] = new char [ L1+1 ];
+    nwdp_initTB( trF, L1, L2 );
+    char ** trQ = new char * [ L2+1 ];
+    for( int j = 0; j <= L2; j++ )
+    	trQ[ j ] = new char [ L1+1 ];
+    nwdp_initTB( trQ, L1, L2 );
+    char ** trP = new char * [ L2+1 ];
+    for( int j = 0; j <= L2; j++ )
+    	trP[ j ] = new char [ L1+1 ];
+    nwdp_initTB( trP, L1, L2 );
+
    	// base pair similarity of bases pairing with nuc_1 and bases pairing with nuc_2
-    for( int j = 1; j <= L2; j++ )
-    	for( int i = 1; i <= L1; i++ )
+   	int j = 1, i = 1;
+    for( j = 1; j <= constr_2; j++ )
+    	for( i = 1; i <= constr_1; i++ )
         {
     		// calculate P
     		P[ j ][ i ] = max3( P[ j-1 ][ i ] + beta, F[ j-1 ][ i ] + gapopen, INFINITE, &ptr );
+            trP[ j ][ i ] =  ptr;
 
     		// calculate Q
-    		Q[ j ][ i ] = max3( INFINITE, F[ j ][ i-1 ] + gapopen, Q[ j ][ i-1 ] + beta, &ptr );
+            Q[ j ][ i ] = max3( INFINITE, F[ j ][ i-1 ] + gapopen, Q[ j ][ i-1 ] + beta, &ptr );
+            trQ[ j ][ i ] =  ptr;
 
-            tau = ( probDbl_1[ i-1 ]==0 || probDbl_2[ j-1 ]==0 ) ? 0 : 1 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
-    		/*float psi = 0.1;
-    		if( probDbl_1[ i-1 ]==0 )
-    			if( probDbl_2[ j-1 ]==0 )
-    				tau = psi;
-    			else
-    				tau = ( probDbl_2[ j-1 ] < psi ) ? psi - probDbl_2[ j-1 ] : 0;
-    		else
-    			if( probDbl_2[ j-1 ]==0 )
-    				tau = ( probDbl_1[ i-1 ] < psi ) ? psi - probDbl_1[ i-1 ] : 0;*/
-
-           //cerr << i << " " << j << " " << probDbl_1[ i-1 ] << " " << probDbl_2[ j-1 ] << " " << tau << endl;
+            tau = ( probDbl_1[ i-1 ]==0 && probDbl_2[ j-1 ]==0 ) ? 0 : 0.5 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
+    		tau *= ( 1 - kappa );
+    		sigma = ( probSgl_1[ i-1 ]==0 && probSgl_2[ j-1 ]==0 ) ? 0 : 0.5 - abs( probSgl_1[ i-1 ] - probSgl_2[ j-1 ] );
+    		tau += kappa * sigma;
 
             // calculate F
             F[ j ][ i ] = max3( P[ j ][ i ], F[ j-1 ][ i-1 ] + tau, Q[ j ][ i ], &ptr );
+            trF[ j ][ i ] =  ptr;
         }
+    if( constr_2+1 <= L2 && constr_1+1 <= L1 ) {
+    	j = constr_2+1;
+    	i = constr_1+1;
+    	F[ j ][ i ] = ( constr_2 > 0 && constr_1 > 0 ) ? F[ constr_2 ][ constr_1 ] + 1 : 1;
+    	trF[ j ][ i ] = '\\';
+    	trQ[ j ][ i ] = '-';
+    	trP[ j ][ i ] = '|';
+    }
+    if( constr_2+2 <= L2 && constr_1+2 <= L1 )
+    {
+		for( j = constr_2+2; j <= L2; j++ )
+			for( i = constr_1+2; i <= L1; i++ )
+			{
+				// calculate P
+				P[ j ][ i ] = max3( P[ j-1 ][ i ] + beta, F[ j-1 ][ i ] + gapopen, INFINITE, &ptr );
+	            trP[ j ][ i ] =  ptr;
 
-	float score = F[ L2 ][ L1 ];
+				// calculate Q
+				Q[ j ][ i ] = max3( INFINITE, F[ j ][ i-1 ] + gapopen, Q[ j ][ i-1 ] + beta, &ptr );
+	            trQ[ j ][ i ] =  ptr;
 
-	// find score without end gaps
-	for( int j = 1; j <= L2; j++ )
-		if( score < F[ j ][ L1 ] )
-			score = F[ j ][ L1 ];
-	for( int i = 1; i <= L1; i++ )
-		if( score < F[ L2 ][ i ] )
-			score = F[ L2 ][ i ];
+				tau = ( probDbl_1[ i-1 ]==0 && probDbl_2[ j-1 ]==0 ) ? 0 : 0.5 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
+	    		tau *= ( 1 - kappa );
+	    		sigma = ( probSgl_1[ i-1 ]==0 && probSgl_2[ j-1 ]==0 ) ? 0 : 0.5 - abs( probSgl_1[ i-1 ] - probSgl_2[ j-1 ] );
+	    		tau += kappa * sigma;
+
+				// calculate F
+				F[ j ][ i ] = max3( P[ j ][ i ], F[ j-1 ][ i-1 ] + tau, Q[ j ][ i ], &ptr );
+	            trF[ j ][ i ] =  ptr;
+			}
+		j--; i--;
+    }
+    score = F[ j ][ i ];
+
+    /* remove 3' tail gaps */
+    bool tail = 0;
+    int maxmat = 0;  // 0 .. F; 1 .. P; 2 .. Q
+    while( i > 0 || j > 0 )
+    {
+    	if( tail )
+    		break;
+
+    	switch( maxmat )
+    	{
+    		case 0 : switch( trF[ j ][ i ] )
+    				 {
+        			 	 case '|' : maxmat = 1;
+        			 	 	 	 	break;
+        			 	 case '\\': tail = 1;
+        			 	 	        break ;
+        			 	 case '-' : maxmat = 2;
+        			 	 	 	 	break;
+    				 }
+    				 break;
+    		 case 1: switch( trP[ j ][ i ] )
+    				 {
+    		 	 	 	 case '|' : j--;
+    		 	 	 	 	 	 	break;
+    		 	 	 	 case '\\': maxmat = 0;
+    		 	 	 	 	 	 	j--;
+    		 	 	 	 	 	 	break;
+    				 }
+    				 break;
+    		 case 2: switch( trQ[ j ][ i ] )
+    		 	 	 {
+ 	 	 	 	 	 	 case '\\': maxmat = 0;
+ 	 	 	 	 	 	 	 	 	i--;
+ 	 	 	 	 	 	 	 	 	break;
+ 	 	 	 	 	 	 case '-' : i--;
+ 	 	 	 	 	 	 	 	 	break;
+    		 	 	 }
+    		 	 	 break;
+    	}
+    }
+	/* update score without 3' tail gaps */
+    score = F[ j ][ i ];
+    //cerr << "trF " << constr_1 << " " << constr_2 << " " << score << " " << F[ L2 ][ L1 ] << endl;
 
     // free memory
     for( int j = 0; j <= L2; j++ )  delete[] F[ j ];
@@ -340,6 +571,12 @@ float nwdb_global_align_affinegaps( float* probDbl_1, int L1, float* probDbl_2, 
     delete[] Q;
     for( int j = 0; j <= L2; j++ )  delete[] P[ j ];
     delete[] P;
+    for( int j = 0; j <= L2; j++ )  delete trF[ j ];
+    delete[] trF;
+    for( int j = 0; j <= L2; j++ )  delete trP[ j ];
+    delete[] trP;
+    for( int j = 0; j <= L2; j++ )  delete trQ[ j ];
+    delete[] trQ;
 
     return score;
 }
@@ -352,7 +589,7 @@ float nwdb_align_seq_sim( char nuc_1, float probSgl_1, char nuc_2, float probSgl
 {
 	float sigma = 0;
 	if( nuc_1 == nuc_2 )
-		sigma = ( probSgl_1==0 || probSgl_2==0 ) ? 0 : 1 - abs( probSgl_1 - probSgl_2 );
+		sigma = ( probSgl_1==0 && probSgl_2==0 ) ? 0.9 : 1 - abs( probSgl_1 - probSgl_2 );
 
 	return sigma;
 }
@@ -670,6 +907,57 @@ void getlogoddsDbl( vector<float> & probDbl, string seq, int len, float pnull )
 }
 
 
+void getlogoddsDblNeighborhood( vector<float> & probDbl, string seq, int len, float pnull, int radius, float theta )
+{
+	vector<float> tmpprob;
+	tmpprob.reserve( len * len );
+	float adjprob;
+	int offset, offsetu, offsetd;
+	int norm;
+
+    for( int i = 0; i < len; i++ )
+    {
+    	offset = i * len;
+    	for( int j = 0; j < len; j++ ) {
+    		//float pnullij = pnullDbl[ 4*nucIdx.at( seq.c_str()[ i ] ) + nucIdx.at( seq.c_str()[ j ] ) ];
+    		//tmpprob[ offset + j ] = max( 0, log( probDbl[ offset + j ] / pnullij ) / log( 1 / pnullij ) );
+    		tmpprob[ offset + j ] = max( 0, log( probDbl[ offset + j ] / pnull ) / log( 1 / pnull ) );
+    	}
+    }
+
+    for( int i = 0; i < len; i++ )
+    {
+    	offset = i * len;
+    	for( int j = 0; j < len; j++ )
+    	{
+    		norm = 2 * radius * radius;
+    		adjprob = 0;
+    		for( int ry = 1; ry <= radius; ry++ )
+    		{
+				offsetu = ( i - ry ) * len;
+				offsetd = ( i + ry ) * len;
+    			for( int rx = 1; rx <= radius; rx++ )
+    			{
+    				if( offsetu < 0 || j + rx >= len )
+    					norm --;
+    				else
+    					adjprob += tmpprob[ offsetu + j + rx ];
+
+    				if( j - rx < 0 || offsetd >= len*len )
+    					norm --;
+    				else
+    					adjprob += tmpprob[ offsetd + j - rx ];
+
+    			}
+    		}
+
+    		//cerr << i << " " << j << " " << tmpprob[ offset + j ] << " " << adjprob << " " << norm << endl;
+        	probDbl[ offset + j ] = ( adjprob > 0 ) ? ( 1 - theta ) * tmpprob[ offset + j ] + theta * adjprob / norm : tmpprob[ offset + j ];
+    	}
+    }
+}
+
+
 /*
  * return normalized log odds of unpaired probabilities weighted by minimal considered unpaired probability
  */
@@ -678,6 +966,7 @@ void getlogoddsSgl( vector<float> & probSgl, string seq, int len, float pnull )
     for( int i = 0; i < len; i++ )
     {
     	//float pnulli = pnullSgl[ nucIdx.at( seq.c_str()[ i ] ) ];
+    	//probSgl[ i ] = max( 0, log( probSgl[ i ] / pnulli ) / log( 1 / pnulli ) );
     	//probSgl[ i ] = ( probSgl[ i ] <= pnull ) ? log( pnull / pnulli ) / log( 1 / pnulli ) : log( probSgl[ i ] / pnulli ) / log( 1 / pnulli );
     	//probSgl[ i ] = ( probSgl[ i ] <= pnulli ) ? 0 : log( probSgl[ i ] / pnulli ) / log( 1 / pnulli );
     	probSgl[ i ] = max( 0, log( probSgl[ i ] / pnull ) / log( 1 / pnull ) );
