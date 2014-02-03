@@ -193,13 +193,35 @@ int main( int argc, char ** argv )
 		float* subprobSgl_1 = new float[ len_1 ];
 		float* subprobSgl_2 = new float[ len_2 ];
 
+	    /* Initialize dynamic programming matrix F (fill in first row and column) */
+	    float ** F = new float * [ len_2 + 1  ];
+	    for( int j = 0; j <= len_2; j++ )
+	    	F[ j ] = new float [ len_1 + 1 ];
+	    /* Initialize Q and P matrices for cost of alignments that end with a gap */
+	    float ** Q = new float * [ len_2 + 1  ];
+	    for( int j = 0; j <= len_2; j++ )
+	    	Q[ j ] = new float [ len_1 + 1 ];
+	    float ** P = new float * [ len_2 + 1  ];
+	    for( int j = 0; j <= len_2; j++ )
+	      	P[ j ] = new float [ len_1 + 1 ];
+	    /* Initialize traceback matrices */
+	    char ** trF = new char * [ len_2 + 1 ];
+	    for( int j = 0; j <= len_2; j++ )
+	    	trF[ j ] = new char [ len_1 + 1 ];
+	    char ** trQ = new char * [ len_2 + 1 ];
+	    for( int j = 0; j <= len_2; j++ )
+	    	trQ[ j ] = new char [ len_1 + 1 ];
+	    char ** trP = new char * [ len_2 + 1 ];
+	    for( int j = 0; j <= len_2; j++ )
+	    	trP[ j ] = new char [ len_1 + 1 ];
+
 		/* run structure alignment of seed or local sequence alignment to position both dot plots */
 		int offset = 0;
 		if( setseqaln_flag )
-			offset = nwseq_seed( seq_1, seq_2 );
+			offset = nwseq_seed( seq_1, seq_2, F, trF );
 		else
-			if( seedlen && len_1 > 2*seedlen && len_2 > 2*seedlen && max(len_1, len_2) > 2*min(len_1, len_2) )
-				offset = nwdp_seed( seq_1, probDbl_1, probSgl_1, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, idx_2_aln, len_2, seedlen, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, sim );
+			if( seedlen && len_1 > 2*seedlen && len_2 > 2*seedlen )// && max(len_1, len_2) > 2*min(len_1, len_2) )
+				offset = nwdp_seed( seq_1, probDbl_1, probSgl_1, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, idx_2_aln, len_2, seedlen, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, sim, F, Q, P, trF, trQ, trP );
 
 		/* run all pairs of pairing probabilities */
 		int k, l;
@@ -209,7 +231,7 @@ int main( int argc, char ** argv )
 			for( k = 0; k<len_1; k++)
 				if( offset + *min + maxshift >= *max && offset + *min - maxshift <= *max )
 					if( sim[ l ][ k ] == INFINITE )
-						sim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, k, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, l, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, setprintmatrix_flag );
+						sim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, k, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, l, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, setprintmatrix_flag, F, Q, P, trF, trQ, trP );
 
 		if( setprintmatrix_flag )
 		{
@@ -222,7 +244,7 @@ int main( int argc, char ** argv )
 		}
 
 		/* STEP 2: find best local (or global) path through similarity matrix */
-		simalign_affinegaps( sim, len_1, len_2, idx_1_aln, idx_2_aln, len_aln, setglobal2_flag, setprintmatrix_flag);
+		simalign_affinegaps( sim, len_1, len_2, idx_1_aln, idx_2_aln, len_aln, setglobal2_flag, setprintmatrix_flag, F, Q, P, trF, trQ, trP );
 
 		#if DEBUG
 			cout << "\tGaps_1 = " << len_1-len_aln << "\tGaps_2 = " << len_2-len_aln << endl;
@@ -236,11 +258,11 @@ int main( int argc, char ** argv )
 
 		/* calculate final similarity */
 		float similarity = 0.;
-		for( int i=0; i<len_aln; i++ )
-			similarity += nwdp( seq_1, probDbl_1, probSgl_1, i, idx_1_aln, len_aln, seq_2, probDbl_2, probSgl_2, i, idx_2_aln, len_aln, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 0, setprintmatrix_flag );
 		int open = 0, extended = 0;
+		for( int i=0; i<len_aln; i++ )
+			similarity += nwdp( seq_1, probDbl_1, probSgl_1, i, idx_1_aln, len_aln, seq_2, probDbl_2, probSgl_2, i, idx_2_aln, len_aln, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 0, setprintmatrix_flag, F, Q, P, trF, trQ, trP );
 		affinegapcosts(idx_1_aln, idx_2_aln, len_aln, open, extended);
-		cout << similarity << " " << alpha*open << " " << beta*extended << " " << len_aln << " " << extended << endl;
+		//cout << similarity << " " << alpha*open << " " << beta*extended << " " << len_aln << " " << extended << endl;
 		similarity = ( len_aln ) ? ( similarity + alpha * open + beta * extended ) / len_aln + 0.5 : 0;
 
 		/* OUTPUT */
@@ -268,6 +290,12 @@ int main( int argc, char ** argv )
         probDbl_2.clear();
         probSgl_1.clear();
         probSgl_2.clear();
+        for( int j = 0; j <= len_2; j++ ) delete[] F[ j ]; delete[] F;
+        for( int j = 0; j <= len_2; j++ ) delete[] Q[ j ]; delete[] Q;
+        for( int j = 0; j <= len_2; j++ ) delete[] P[ j ]; delete[] P;
+        for( int j = 0; j <= len_2; j++ ) delete[] trF[ j ]; delete[] trF;
+        for( int j = 0; j <= len_2; j++ ) delete[] trP[ j ]; delete[] trP;
+        for( int j = 0; j <= len_2; j++ ) delete[] trQ[ j ]; delete[] trQ;
 
         return  0;
 }
