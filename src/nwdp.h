@@ -38,6 +38,7 @@ extern std::map<const char, const int> nucIdx;
 extern float kappa;
 extern float alpha;
 extern float beta;
+extern float deltanull;
 
 extern float INFINITE;
 
@@ -55,23 +56,24 @@ vector<string> &split(const string &s, char delim, vector<string> &elems);
 vector<string> split(const string &s, char delim);
 
 extern void reducematrix(vector<float> & prob, int len, int prec );
-extern float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int relative_startindex_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int relative_startindex_2, int * idx_2_aln, int len_2, bool prm );
+extern float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int relative_startindex_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int relative_startindex_2, int * idx_2_aln, int len_2, float * subprobDbl_1, float * subprobSgl_1, float * subprobDbl_2, float * subprobSgl_2, bool freeEndGaps, bool prm );
+extern int nwdp_seed( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int * idx_2_aln, int seedlen, int len_2, float * subprobDbl_1, float * subprobSgl_1, float * subprobDbl_2, float * subprobSgl_2, float ** sim );
+extern int nwseq_seed( string seq_1, string seq_2 );
 extern void nwdp_initF( float ** F, int L1, int L2 );
 extern void nwdp_initF_affinegaps( float ** F, int L1, int L2, bool local );
 extern void nwdp_initGap( float ** Q, int L1, int L2 );
 extern float nwdb_align_seq_sim( char nuc_1, float probSgl_1, char nuc_2, float probSgl_2 );
-extern float nwdb_global_align_affinegaps( float* probDbl_1, float* probSgl_1, int len_1, float* probDbl_2, float* probSgl_2, int len_2 );
+extern float nwdb_global_align_affinegaps( float* probDbl_1, float* probSgl_1, int len_1, float* probDbl_2, float* probSgl_2, int len_2, bool freeEndGaps );
 extern float nwdb_constraint_global_align_affinegaps( float* probDbl_1, vector<float> & probSgl_1, int len_1, int constr_1, float* probDbl_2, vector<float> & probSgl_2, int len_2, int constr_2 );
 extern float max3( float f1, float f2, float f3, char* ptr );
 extern float max( float f1, float f2 );
 template <typename T>
 extern void print_matrixdp( T ** F, float * prob_1, int len_1, float * prob_2, int len_2 );
-extern float simalign_affinegaps( float ** Z, int len_1, int len_2, int * idx_1_aln, int * idx_2_aln, int & len_aln, int precision, bool global2, bool prm);
+extern float simalign_affinegaps( float ** Z, int len_1, int len_2, int * idx_1_aln, int * idx_2_aln, int & len_aln, bool global2, bool prm);
 extern void affinegapcosts( int * idx_1_aln, int * idx_2_aln, int & len_aln, int & open, int & extended );
 extern void nwdp_initTB( char ** traceback, int L1, int L2 );
 extern void reverse( int * list, int len );
 extern float getOverlap2ndInterval( int start_1, int end_1, int start_2, int end_2 );
-extern void getlogoddsDbl( vector<float> & probDbl, string seq, int len, float pnull );
 extern void getlogoddsDblNeighborhood( vector<float> & probDbl, string seq, int len, float pnull, int radius, float theta );
 extern void getlogoddsSgl( vector<float> & probSgl, string seq, int len, float pnull );
 extern void printalign(string & seq_1, int * idx_1_aln, string & seq_2, int * idx_2_aln, int len_aln );
