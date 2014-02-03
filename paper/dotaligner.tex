@@ -476,13 +476,24 @@ Local alignment, simulating genomic screens. More emphasis on qualitative cluste
 
 \section{\uppercase{Discussion}}
 
-\noindent We plan to integrate the proposed method in a pipeline that screens
+\noindent The proposed method does not intent to find the optimal alignment of
+basepair probability matrices because in step 1 pairing probabilities are
+aligned for each pair of nucleotides  and these alignments may differ between
+nucleotide pairs. However, the application of \dotaligner{} is a fastly
+calculated similarity score between two probability matrices to enable their
+subsequent clustering.  Compared to \carna{}, which also does not garanty the
+optimal solution, \dotaligner{} is deterministic. Previously we repeated step 1
+and 2 of \dotaligner{} until no new gaps were included in the alignment,
+however, we neglected this strategy to improve speed because the alignment
+changes were marginal.
+
+We plan to integrate the proposed method in a pipeline that screens
 regions of interest for structured RNA domains in a collection of RNA
 molecules.  The so far presented approach finds only semi-local alignments,
 meaning the heuristic in the first step of the algorithm gives global
 alignments, whereas the second step provides a final local alignment. This
-strategy is applicable for input sequences of similar lengths, however, a real
-local alignment is necessary if input sequences are very long or have different
+strategy is applicable for input sequences of similar lengths, however, a
+local alignment is favorable if input sequences are very long or have different
 lengths.  Hence, a possible screening pipeline may comprise window based
 thermodynamic folding, \eg{} by \rnaplfold{}
 \cite{Bernhart:Hofacker:Stadler:Local_RNA_base:2006}, the identification of
