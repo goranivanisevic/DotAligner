@@ -195,29 +195,23 @@ float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, 
 int nwdp_seed( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int * idx_2_aln, int len_2, int seedlen, float * subprobDbl_1, float * subprobSgl_1, float * subprobDbl_2, float * subprobSgl_2, float ** sim, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP )
 {
 	int maxlen = ( len_2 > len_1 ) ? len_2 : len_1;
+	int minlen = ( len_2 > len_1 ) ? len_1 : len_2;
 
-	int L1, L2;
-	L1 = ( len_2 > len_1 ) ? len_1 : len_2;
-	L2 = ( len_2 > len_1 ) ? len_2 : len_1;
-	float **seedsim = new float*[ L2 ];
-	for( int j=0; j<L2; j++ )
-		seedsim[j] = new float[ L1 ];
-	for( int j=0; j<L2; j++ )
-    	for( int i=0; i<L1; i++ )
+	float **seedsim = new float*[ maxlen ];
+	for( int j=0; j<maxlen; j++ )
+		seedsim[j] = new float[ minlen ];
+	for( int j=0; j<maxlen; j++ )
+    	for( int i=0; i<minlen; i++ )
     		seedsim[ j ][ i ] = INFINITE;
 
     /* get seed sequence from shorter sequence */
-	int *idx_seed_aln = new int[seedlen];
-	for( int i=0; i<seedlen; i++ )
-		idx_seed_aln[ i ] = i;
-
 	for( int k = 0; k < seedlen; k++ )
 		for( int l = 0; l < maxlen - seedlen - k; l++ )
 		{
 			if( len_2 > len_1 )
 				sim[ l ][ k ] = seedsim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, k, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, l, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, 0, F, Q, P, trF, trQ, trP );
 			else
-				sim[ k ][ l ] = seedsim[ k ][ l ] = nwdp( seq_1, probDbl_1, probSgl_1, l, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, k, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, 0, F, Q, P, trF, trQ, trP );
+				sim[ k ][ l ] = seedsim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, l, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, k, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, 0, F, Q, P, trF, trQ, trP );
 		}
 
 	/* run simalign_affinegaps */
@@ -619,19 +613,19 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
     	float lmax = 0;
         for( j = 1; j <= L2; j++ )
         	for( i = 1; i <= L1; i++ ) {
-        		if( F[ j ][ i ] >= lmax ) {
+        		if( F[ j ][ i ] > lmax ) {
         			lmax = F[ j ][ i ];
         			li = i;
         			lj = j;
         			maxmat = 0;
         		}
-        		if( P[ j ][ i ] >= lmax ) {
+        		if( P[ j ][ i ] > lmax ) {
         			lmax = P[ j ][ i ];
         			li = i;
         			lj = j;
         			maxmat = 1;
         		}
-        		if( Q[ j ][ i ] >= lmax ) {
+        		if( Q[ j ][ i ] > lmax ) {
         			lmax = Q[ j ][ i ];
         			li = i;
         			lj = j;
@@ -707,6 +701,8 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
     	print_matrixdp( trQ, tempidx_1, L1, tempidx_2, L2);
         free(tempidx_1);
         free(tempidx_2);
+        for(int i=0; i<Laln; i++){cerr << idx_1_aln[i] << " ";} cerr << endl;
+        for(int i=0; i<Laln; i++){cerr << idx_2_aln[i] << " ";} cerr << endl;
     }
 	cerr << "STRUCTALN: Seq_1 ( " << i << ", " << li << " ); Seq_2 ( " << j << ", " << lj << " )" << endl;
 

@@ -24,7 +24,7 @@ system "RNAfold -p -d2 --noLP < $fasta > /dev/null";
 open(file_local, $pwd . "/" . $name . "_dp.ps");
 my $start = 0;
 while( <file_local> ) {
-  if( /%data starts here/ ) {
+  if( /%start of base pair probability data/ ) {
     $start = 1;
     next;
   }

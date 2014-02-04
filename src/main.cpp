@@ -220,7 +220,7 @@ int main( int argc, char ** argv )
 		if( setseqaln_flag )
 			offset = nwseq_seed( seq_1, seq_2, F, trF );
 		else
-			if( seedlen && len_1 > 2*seedlen && len_2 > 2*seedlen )// && max(len_1, len_2) > 2*min(len_1, len_2) )
+			//if( seedlen && len_1 > 2*seedlen && len_2 > 2*seedlen )
 				offset = nwdp_seed( seq_1, probDbl_1, probSgl_1, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, idx_2_aln, len_2, seedlen, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, sim, F, Q, P, trF, trQ, trP );
 
 		/* run all pairs of pairing probabilities */
