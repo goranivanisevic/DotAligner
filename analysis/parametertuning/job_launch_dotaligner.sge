@@ -5,9 +5,6 @@
 #$ -V                         	# Export environment variables into script (change as needed)
 #$ -S /bin/bash			# Enforce bash (don't touch!!!!)
 #$ -pe smp 1			# Single CPU per qsub submission
-#$ -N DOTALIGN			# Job name
-#$ -o DOTALIGN.out		# stdout
-#$ -e DOTALIGN.err		# stderr
 
-/path/to/split/files/file_${SGE_TASK_ID}
+/home/stesee/DotAligner/analysis/parametertuning/jobs/dotaligner4tuning_${SGE_TASK_ID}
 
