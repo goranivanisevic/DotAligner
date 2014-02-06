@@ -1,0 +1,19 @@
+#Random selection in 3 PID bins (1-50; 51-80; 81-95) from GenerateRFAMsubsets.java
+#triple grep : 
+#cut -d " " -f 8 1_50.rfam | grep RF | while read line ; do grep `echo $line` 81_95.rfam ; done | cut -d " " -f 8 | while read line; do grep `echo $line` 51_80.rfam ; done | cut -d " " -f 8 | while read line ; do grep -h -A 2 `echo $line` *fa | egrep -v -e "^--$" ; done > alignments.fa 
+#Manual selection >10% difference between bins (e.g. no 49;52;86)
+
+RF00133	SNORD33 (U33) 	CD Box 	[Eukaryota]
+RF00114	Ribosomal S15 leader	Forms 2 altrn strcts 	[Prokaryota]
+RF00102	VA RNA	adenovirus translation regulation	[Eukaryota; Viridae]
+RF00100	7SK	snRNA/snRNP	[Eukaryota]
+RF00055	SNORD96	CD Box	[Eukaryota]
+RF00054 SNORD25 CD Box	[Eukaryota]
+RF00053	mir-7 miRNA precursor [Eukaryota]
+RF00045	snR30-U17	HACA snRNA U17	[Eukaryota]
+RF00029	gII-intron	G2 catalytic intron	[Prokaryota; Eukaryota]
+RF00016 U14	CD Box	[Eukaryota]
+RF00008	Hammerhead	Ribozyme	[Eukaryota; Viridae]
+RF00007 U12 	snRNA	[Eukaryota]
+RF00004	U2	snRNA	[Eukaryota]
+RF00001	5s_rRNA	rRNA	[Eukaryota; Prokaryota; Archae]
