@@ -1,0 +1,2 @@
+java GenerateRFAMsubsets -strip -min_f 3 -t 200 -max_f 20 -min_pi 56 -max_pi 95  -i ~/apps/git/DotAligner/analysis/rfam/sampled/ -o ./
+java GenerateRFAMsubsets -strip -min_f 3 -t 200 -max_f 20 -min_pi 10 -max_pi 55  -i ~/apps/git/DotAligner/analysis/rfam/sampled/ -o ./
