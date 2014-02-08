@@ -1,0 +1,71 @@
+PTDOTALIGNER=/home/stesee/DotAligner/analysis/parametertuning
+
+#generate pp files
+mkdir ${PTDOTALIGNER}/data/rfam_pairwise_threesomes
+./getPP4RNA.sh ${PTDOTALIGNER}/rfam_pairwise_threesomes.fasta
+
+#get 192 job commands
+./runDotAligner4Tuning.sh > testit.sh
+split -l 1512 -a 3 -d testit.sh ${PTDOTALIGNER}/jobs/dotaligner4tuning
+rm testit.sh
+for i in `perl -e '{for(my $i=0; $i<192; $i++){printf("%03i ",$i)}}'`; do cat jobs/dotaligner4tuning${i} | awk -v i=$i '{gsub("dotaligner.out","dotaligner"i".out"); print $0}' > tmp.out; mv tmp.out jobs/dotaligner4tuning${i}; j=`echo "" | awk -v i=$i '{print ++i}'`; mv jobs/dotaligner4tuning${i} jobs/dotaligner4tuning_${j}; done
+chmod 744 jobs/dotaligner4tuning*
+#submit jobs
+qsub -q all.q -N da4tun -t 1-192 job_launch_dotaligner.sge
+
+#merge results
+cat dotaligner*.out | gzip > ${PTDOTALIGNER}/output/dotaligner4tuning.out.gz
+gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.gz | awk 'BEGIN{OFS=","}{ if($1=="PARAMETER"){ seq=""; split($2,x,"/");f1=x[length(x)];if(gsub("_","_",x[length(x)])==3){split(x[length(x)],y,"_");sub(".pp","",y[4]);pid=y[4]}; split($3,x,"/");f2=x[length(x)];if(gsub("_","_",x[length(x)])==3){split(x[length(x)],y,"_");sub(".pp","",y[4]);pid=y[4]}; k=$5; a=$7; b=$9; r=$11; t=$13; l=$15; s=$17; m=$19; seqaln=$21 }else{ if($1=="Similarity"){ sub(/,$/,"",$3);sim=$3 }else{ if($1~/^[AUGC-]/){ seq=seq","$1 }else{ if($1=="user"){ split($2,c,"m");sub("s","",c[2]);time=60*c[1]+c[2] }else{ if($1=="sys"){ sub(/^,/,"",seq); print f1,f2,pid,k,a,b,r,t,l,s,m,seqaln,sim,seq,time }}}}} }' | gzip > ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz
+
+#calculate SPS (sum-of-pairs score)
+for i in `perl -e 'for($i=6; $i<=252; $i+=6){print $i." "}'`; do
+  head -${i} ${PTDOTALIGNER}/rfam_pairwise_threesomes.fasta | tail -6 | awk '{if(NR==1 || NR==2 || NR==4 || NR==5){print $0}else{gsub(/</,"(");gsub(/>/,")");print ">structure\n"$0}}' > tmp.rfam_pairwise_threesomes.fasta;
+  FNAME=`awk 'BEGIN{idx=1}/^>/{sub(/^>/,"");fname[idx]=$1;idx++}END{print fname[1]"__"fname[3]}' tmp.rfam_pairwise_threesomes.fasta`
+  removeGapsInFasta.pl tmp.rfam_pairwise_threesomes.fasta > ref_${FNAME}.fa;
+  awk 'NR==1 || NR==2 || NR==5 || NR==6{print $0}' ref_${FNAME}.fa > ref_${FNAME}.fasta;
+done
+rm -f tmp.sps.txt
+gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz | sed 's/\.pp//g' | while read LINE; do
+  RFAM1=${LINE%%,*};
+  TEMP=${LINE#*,};
+  RFAM2=${TEMP%%,*};
+  echo $LINE | awk -F "," '{gsub("-",".",$14);gsub("-",".",$15);print ">"$1"\n"$14"\n>"$2"\n"$15}' > test_aln.fa
+  getSPS.pl ref_${RFAM1}__${RFAM2}.fasta test_aln.fa >> tmp.sps.txt
+done
+paste <(gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz) tmp.sps.txt | awk '{print $1","$4}' | gzip > tmp.dotaligner4tuning.csv.gz
+mv tmp.dotaligner4tuning.csv.gz ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz
+
+#calculate SCI (structure conservation index) based on free energy of the thermodynamic ensemble 
+#using RNAalifold for pairwise alignment and RNAfold for single sequences
+rm -f tmp.sci.txt
+gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz | sed 's/\.pp//g' | while read LINE; do
+  echo $LINE | awk -F "," '{gsub("-",".",$14);gsub("-",".",$15);print ">"$1"\n"$14"\n>"$2"\n"$15}' | fa2aln.pl - > test_aln.aln
+  ALIENERGYENSEMBLE=`RNAalifold -p -d2 --noLP < test_aln.aln 2> /dev/null | sed -n 3p | awk '{sub(/\[/,"",$NF);sub(/\]/,"",$NF); print $NF}'` 
+  RNAfold -p -d2 --noLP < test_aln.aln 2> /dev/null > tmp.rnafold.out
+  SEQ1ENERGYENSEMBLE=`sed -n 8p tmp.rnafold.out | awk '{sub(/\[/,"",$NF);sub(/\]/,"",$NF); print $NF}'`
+  SEQ2ENERGYENSEMBLE=`sed -n 13p tmp.rnafold.out | awk '{sub(/\[/,"",$NF);sub(/\]/,"",$NF); print $NF}'`
+  echo "SCI" | awk -v econs=$ALIENERGYENSEMBLE -v eseq1=$SEQ1ENERGYENSEMBLE -v eseq2=$SEQ2ENERGYENSEMBLE '{ printf("%6.5f\n", 2 * econs / ( eseq1 + eseq2 ) ) }' >> tmp.sci.txt
+done
+paste <(gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz) tmp.sci.txt | awk '{print $1","$2}' | gzip > tmp.dotaligner4tuning.csv.gz
+mv tmp.dotaligner4tuning.csv.gz ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz
+
+#calculate MCC of Rfam consensus structure to RNAalifold structure
+rm -f tmp.mcc.txt
+gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz | sed 's/\.pp//g' | while read LINE; do
+  RFAM1=${LINE%%,*};
+  TEMP=${LINE#*,};
+  RFAM2=${TEMP%%,*};
+  #removeBPInAlignment.pl ref_${RFAM1}__${RFAM2}.fa | awk 'BEGIN{ORS=""}{if(NR==1 || NR==5){ sub(/^>/,"");print $1"\t" }else{ if(NR==2 || NR==6 ){ gsub(/\./,"-");print $1"\t" }else{ if(NR==4 || NR==8){ print $1"\n" } } }}' > ref.ccinput
+  awk 'BEGIN{ORS=""}{if(NR==1 || NR==5){ sub(/^>/,"");print $1"\t" }else{ if(NR==2 || NR==6 ){ gsub(/\./,"-");print $1"\t" }else{ if(NR==4 || NR==8){ print $1"\n" } } }}' ref_${RFAM1}__${RFAM2}.fa > ref.ccinput
+  echo $LINE | awk -F "," '{gsub("-",".",$14);gsub("-",".",$15);print ">"$1"\n"$14"\n>"$2"\n"$15}' | fa2aln.pl - > test_aln.aln
+  TESTCONS=`RNAalifold -p -d2 --noLP < test_aln.aln 2> /dev/null | sed -n 2p | cut -d" " -f1` 
+  #tail -3 test_aln.aln | head -2 | awk -v cons=$TESTCONS 'BEGIN{OFS="\t"}{print $1,$2,cons}' | awk 'BEGIN{OFS="\n"}{print ">"$1,$2,">structure",$3}' | removeBPInAlignment.pl - | awk 'BEGIN{ORS=""}{if(NR==1 || NR==5){ sub(/^>/,"");print $1"\t" }else{ if(NR==2 || NR==6 ){ gsub(/\./,"-");print $1"\t"}else{ if(NR==4 || NR==8){ print $1"\n" } } }}' > test.ccinput
+  tail -3 test_aln.aln | head -2 | awk -v cons=$TESTCONS 'BEGIN{OFS="\t"}{print $1,$2,cons}' > test.ccinput
+  structureCC -f=test.ccinput ref.ccinput | awk 'BEGIN{s=0}{s=s+$8}END{if(NR==0){print "0"}else{cc=s/NR;if(cc<0){cc=0};print cc}}' >> tmp.mcc.txt
+done
+paste <(gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz) tmp.mcc.txt | awk '{print $1","$2}' | gzip > tmp.dotaligner4tuning.csv.gz
+mv tmp.dotaligner4tuning.csv.gz ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz
+
+#draw some beautiful graphs
+gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz | awk '{gsub(/,/,"\t");print $0}' | sort -k18gr | less
+

@@ -270,6 +270,7 @@ int nwseq_seed( string seq_1, string seq_2, float ** F, char ** trF )
 	            case 'C':  x = 1 ;  break ;
 	            case 'G':  x = 2 ;  break ;
 	            case 'T':  x = 3 ;  break ;
+	            case 'U':  x = 3 ;  break ;
 	        }
 
 	        nuc = seq_2[ j-1 ] ;
@@ -280,6 +281,7 @@ int nwseq_seed( string seq_1, string seq_2, float ** F, char ** trF )
 	            case 'C':  y = 1 ;  break ;
 	            case 'G':  y = 2 ;  break ;
 	            case 'T':  y = 3 ;  break;
+	            case 'U':  y = 3 ;  break ;
 	        }
 
 	        fU = F[ j-1 ][ i ] + d ;
@@ -330,7 +332,7 @@ int nwseq_seed( string seq_1, string seq_2, float ** F, char ** trF )
 		for( int k = 0; k <= L2; k++ ) tempidx_2[ k ] = (float) k;
 		cout << "F:" << endl;
 		print_matrixdp( F, tempidx_1, L1, tempidx_2, L2);
-		print_matrixdp( trF, tempidx_1, L1, tempidx_2, L2);*/
+		print_matrixdp( trF, tempidx_1, L1, tempidx_2, L2);
 	#endif
 	cerr << "SEQALN: Seq_1 ( " << i << ", " << li << " ); Seq_2 ( " << j << ", " << lj << " )" << endl;
 
@@ -435,7 +437,7 @@ float nwdb_global_align_affinegaps( float* probDbl_1, float* probSgl_1, int L1, 
             trQ[ j ][ i ] =  ptr;
 
 			// calculate F
-			tau = ( probDbl_1[ i-1 ]==0 && probDbl_2[ j-1 ]==0 ) ? deltanull : 0.5 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
+            tau = ( probDbl_1[ i-1 ]==0 && probDbl_2[ j-1 ]==0 ) ? deltanull : 0.5 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
     		tau *= ( 1 - kappa );
     		sigma = ( probSgl_1[ i-1 ]==0 && probSgl_2[ j-1 ]==0 ) ? deltanull : 0.5 - abs( probSgl_1[ i-1 ] - probSgl_2[ j-1 ] );
     		tau += kappa * sigma;

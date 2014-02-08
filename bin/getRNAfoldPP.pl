@@ -18,7 +18,8 @@ for( my $i=0; $i<$len; $i++ ) {
 }
 
 # call RNAfold -p
-system "RNAfold -p -d2 --noLP < $fasta > /dev/null";
+#system "RNAfold -p -d2 --noLP < $fasta > /dev/null";
+system "RNAfold -p2 < $fasta > /dev/null";
 
 # fill matrix with probabilities of folding energies predicted by RNAfold
 open(file_local, $pwd . "/" . $name . "_dp.ps");

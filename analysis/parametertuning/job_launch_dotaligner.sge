@@ -6,5 +6,5 @@
 #$ -S /bin/bash			# Enforce bash (don't touch!!!!)
 #$ -pe smp 1			# Single CPU per qsub submission
 
-/home/stesee/DotAligner/analysis/parametertuning/jobs/dotaligner4tuning_${SGE_TASK_ID}
+/home/stesee/DotAligner/analysis/parametertuning/jobs/dotaligner4tuning_${SGE_TASK_ID}_new
 

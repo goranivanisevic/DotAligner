@@ -1,0 +1,13 @@
+HDOTALIGNER=/home/stesee/DotAligner
+#module load /share/ClusterShare/Modules/modulefiles/contrib/gi/ViennaRNA/2.1.3
+#RNAfold -p2 --noLP
+
+#get 192 job commands
+./runPMCOMP4Benchmark_seed_10_55.sh > testit.sh
+split -l 147 -a 3 -d testit.sh ${HDOTALIGNER}/analysis/pmcomp/jobs/pmcomp4benchmark
+rm testit.sh
+for i in `perl -e '{for(my $i=0; $i<192; $i++){printf("%03i ",$i)}}'`; do cat jobs/pmcomp4benchmark${i} | awk -v i=$i '{gsub("seed_10_55.pmcomp","seed_10_55.pmcomp"i); print $0}' > tmp.out; mv tmp.out jobs/pmcomp4benchmark${i}; j=`echo "" | awk -v i=$i '{print ++i}'`; mv jobs/pmcomp4benchmark${i} jobs/pmcomp4benchmark_${j}; done
+chmod 744 jobs/pmcomp4benchmark*
+#submit jobs
+qsub -q all.q -N pm4ben -t 1-191 job_launch_pmcomp.sge
+

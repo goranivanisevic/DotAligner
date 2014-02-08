@@ -1,0 +1,16 @@
+HDOTALIGNER=/home/stesee/DotAligner
+PROG=nw
+#DATA=seed_10_55
+DATA=seed_56_95
+#NRSPLIT=148
+NRSPLIT=114
+
+#get 192 job commands
+./runNW4Benchmark.sh $DATA > testit.sh
+split -l $NRSPLIT -a 3 -d testit.sh ${HDOTALIGNER}/analysis/${PROG}/jobs/${PROG}4benchmark_${DATA}_
+rm testit.sh
+for i in `perl -e '{for(my $i=191; $i>=0; $i--){printf("%03i ",$i)}}'`; do cat jobs/${PROG}4benchmark_${DATA}_${i} | awk -v i=$i -v data=$DATA -v prog=$PROG '{gsub(data"."prog,data"."prog""i); print $0}' > tmp.out; mv tmp.out jobs/${PROG}4benchmark_${DATA}_${i}; j=`echo "" | awk -v i=$i '{print i+1}'`; mv jobs/${PROG}4benchmark_${DATA}_${i} jobs/${PROG}4benchmark_${DATA}_${j}; done
+chmod 744 jobs/${PROG}4benchmark_${DATA}*
+#submit jobs
+qsub -q all.q -N ${PROG}4ben -t 1-192 job_launch_${PROG}.sge
+
