@@ -4,8 +4,8 @@ PROG=foldalign
 EXE=foldalign
 
 DATA=$1
-#DATA=seed_10_55
-#DATA=seed_56_95
+#DATA=seed_10_55.new
+#DATA=seed_56_95.new
 
 rm -f ${DATA}.${PROG};
 for FAMSEQ1 in `ls ${HDOTALIGNER}/analysis/rfam/selected_PIDs/${DATA}/*.fa`;

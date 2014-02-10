@@ -1,9 +1,9 @@
 HDOTALIGNER=/home/stesee/DotAligner
 PROG=nw
-#DATA=seed_10_55
-DATA=seed_56_95
-#NRSPLIT=148
-NRSPLIT=114
+#DATA=seed_10_55.new
+DATA=seed_56_95.new
+#NRSPLIT=120
+NRSPLIT=126
 
 #get 192 job commands
 ./runNW4Benchmark.sh $DATA > testit.sh
@@ -13,4 +13,5 @@ for i in `perl -e '{for(my $i=191; $i>=0; $i--){printf("%03i ",$i)}}'`; do cat j
 chmod 744 jobs/${PROG}4benchmark_${DATA}*
 #submit jobs
 qsub -q all.q -N ${PROG}4ben -t 1-192 job_launch_${PROG}.sge
-
+#merge results
+for i in `perl -e '{for(my $i=0; $i<=190; $i++){printf("%03i ",$i)}}'`; do cat ${DATA}.${PROG}${i} >> ${DATA}.${PROG}; done
