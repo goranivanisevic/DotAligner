@@ -14,7 +14,7 @@
 using namespace std;
 
 
-extern int  nw( 
+extern float  nw( 
                  string, string, 
                  string&, string&,
                  bool

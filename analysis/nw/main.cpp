@@ -80,7 +80,7 @@ int  main( int argc, char ** argv )
         string  seq_2_al;
 
         // Get alignment
-        int score = nw( seq_1, seq_2, seq_1_al, seq_2_al, prm ) ;   
+        float score = nw( seq_1, seq_2, seq_1_al, seq_2_al, prm ) ;   
 
         // Print alignment
 	cout << "Score = " << score << endl;

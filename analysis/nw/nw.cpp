@@ -9,7 +9,7 @@
 using namespace std;
 
 
-int nw(                                                          
+float nw(                                                          
         string       seq_1,          /*  Needleman-Wunsch   */
         string       seq_2,          /*  algorithm for      */
         string&      seq_1_al,       /*  global alignment   */
@@ -34,8 +34,8 @@ int nw(
         dpm_init( F, traceback, L1, L2, d );
 
         // Create alignment
-        nw_align( F, traceback, seq_1, seq_2, seq_1_al, seq_2_al, d );
-	int score = F[ L2 ][ L1 ];
+        int laln = nw_align( F, traceback, seq_1, seq_2, seq_1_al, seq_2_al, d );
+	float score = F[ L2 ][ L1 ] / (float) laln;
 
         #if DEBUG
             int  L_al = seq_1_al.length();
@@ -169,7 +169,7 @@ int nw_align(                  // Needleman-Wunsch algorithm
         reverse( seq_1_al.begin(), seq_1_al.end() );
         reverse( seq_2_al.begin(), seq_2_al.end() );
 
-        return  0 ;
+        return  k ;
 }
 
 

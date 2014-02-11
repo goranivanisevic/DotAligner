@@ -1,9 +1,9 @@
 HDOTALIGNER=/home/stesee/DotAligner
 PROG=nw
-#DATA=seed_10_55.new
-DATA=seed_56_95.new
-#NRSPLIT=120
-NRSPLIT=126
+DATA=seed_10_55.new
+#DATA=seed_56_95.new
+NRSPLIT=120
+#NRSPLIT=126
 
 #get 192 job commands
 ./runNW4Benchmark.sh $DATA > testit.sh
@@ -15,3 +15,64 @@ chmod 744 jobs/${PROG}4benchmark_${DATA}*
 qsub -q all.q -N ${PROG}4ben -t 1-192 job_launch_${PROG}.sge
 #merge results
 for i in `perl -e '{for(my $i=0; $i<=190; $i++){printf("%03i ",$i)}}'`; do cat ${DATA}.${PROG}${i} >> ${DATA}.${PROG}; done
+gunzip -c ${DATA}.${PROG}.gz | awk 'BEGIN{OFS=","}{ if(NR%8==1){ split($1,a,"/");split($2,b,"/");sub(/.fa/,"",a[length(a)]);sub(/.fa/,"",b[length(a)]);s1=a[length(a)];s2=b[length(b)] }; if(NR%8==2){ sc=$3 }; if(NR%8==3){ a1=$1 }; if(NR%8==4){ a2=$1 }; if(NR%8==7){ split($2,c,"m");sub("s","",c[2]);time=60*c[1]+c[2]; print s1,s2,a1,a2,sc,time }; }' | gzip > ${DATA}.${PROG}.csv.gz
+
+#pvclust
+gunzip -c ${DATA}.nw.csv.gz | awk '{gsub(/,/,"\t");if($1==$2){print $1,$2,$5}else{print $1,$2,$5"\n"$2,$1,$5}}' | sort -k1,2 | awk 'BEGIN{ORS=""}{print $3," "; if(NR%154 == 0){print "\n"}}' > ${DATA}.nw.2x2
+gunzip -c ${DATA}.nw.csv.gz | awk '{gsub(/,/,"\t");if($1==$2){print $1,$2,$5}else{print $1,$2,$5"\n"$2,$1,$5}}' | cut -d" " -f1 | sort -u | awk '{split($1,a,"_");print a[1]}' > ${DATA}.identifier
+library(pvclust)
+seed_10_55.new.nw<-read.table("seed_10_55.new.nw.2x2")
+seed_10_55.new.nw.df<-as.data.frame.matrix(seed_10_55.new.nw)
+identifier<-read.table("seed_10_55.new.identifier")[,1]
+colnames(seed_10_55.new.nw.df)<-identifier
+result <- pvclust(seed_10_55.new.nw.df, method.dist="cor", method.hclust="average", nboot=10000)
+pdf("seed_10_55.new.nw.bootstrap10000.pdf",width=180,height=10)
+plot(result)
+pvrect(result, alpha=0.95)
+dev.off()
+list2ascii <- function(x,file=paste(deparse(substitute(x)),".txt",sep="")) {
+ tmp.wid = getOption("width")  # save current width
+ options(width=10000)          # increase output width
+ sink(file)                    # redirect output to file
+ print(x)                      # print the object
+ sink()                        # cancel redirection
+ options(width=tmp.wid)        # restore linewidth
+ return(invisible(NULL))       # return (nothing) from function
+}
+list2ascii(pvpick(result, alpha=0.95, pv="au", type="geq", max.only=TRUE)$clusters,file="seed_10_55.new.nw.clusters")
+
+#get members of clusters
+cat ${DATA}.${PROG}.clusters | awk '{if(/^\[\[/){gsub(/\[/,"",$1);gsub(/\]/,"",$1);c=$1}else{if(/\[\s*/){for(i=2;i<=NF;i++){gsub(/"/,"",$i);print c,$i}}}}' > ${DATA}.${PROG}.clusters.list
+#get non-clustered families as FN
+merge.pl <(cut -d" " -f2 ${DATA}.${PROG}.clusters.list | sort | uniq -c) <(ls ${HDOTALIGNER}/analysis/rfam/selected_PIDs/${DATA}/*.fa | awk '{split($1,a,/\//);split(a[length(a)],b,/_/);print b[1]}' | sort | uniq -c ) 2,2 | awk '{print ($1-$3),$2}' > ${DATA}.${PROG}.noclusters.list
+#cmp2lists.pl 4 <(cat ${DATA}.${PROG}.clusters | awk '{if(/^\[\[/){gsub(/\[/,"",$1);gsub(/\]/,"",$1);c=$1}else{if(/\[\s*/){for(i=2;i<=NF;i++){gsub(/"/,"",$i);split($i,a,"_");print substr(a[1], 0, 11)"_"a[2]}}}}') <(grep "^>" snorna.selection_l140 | awk '{sub(">","");print substr($1, 0, 11)"_"$2}') | awk '{split($1,a,"_");print a[2]}' | sort | uniq -c > ${DATA}.${PROG}.noclusters.list
+${HDOTALIGNER}/bin/clusterstatistics.pl ${DATA}.${PROG}.clusters.list ${DATA}.${PROG}.noclusters.list
+
+DATA=seed_56_95.new
+RF01699:	TP = 7	FP = 110	TN = 37	FN = 0	SP = 0.2517	SN = 1.0000
+RF02001:	TP = 10	FP = 107	TN = 37	FN = 0	SP = 0.2569	SN = 1.0000
+RF00015:	TP = 20	FP = 97	TN = 37	FN = 0	SP = 0.2761	SN = 1.0000
+RF01685:	TP = 20	FP = 17	TN = 117	FN = 0	SP = 0.8731	SN = 1.0000
+RF00379:	TP = 20	FP = 97	TN = 37	FN = 0	SP = 0.2761	SN = 1.0000
+RF01055:	TP = 14	FP = 103	TN = 37	FN = 0	SP = 0.2643	SN = 1.0000
+RF00557:	TP = 3	FP = 114	TN = 37	FN = 0	SP = 0.2450	SN = 1.0000
+RF00162:	TP = 17	FP = 20	TN = 114	FN = 3	SP = 0.8507	SN = 0.8500
+RF00380:	TP = 20	FP = 97	TN = 37	FN = 0	SP = 0.2761	SN = 1.0000
+RF00013:	TP = 20	FP = 97	TN = 37	FN = 0	SP = 0.2761	SN = 1.0000
+SP = 0.3846
+SN = 0.9850
+DATA=seed_10_55.new
+RF01699:	TP = 17	FP = 4	TN = 130	FN = 0	SP = 0.9701	SN = 1.0000
+RF02001:	TP = 20	FP = 12	TN = 119	FN = 0	SP = 0.9084	SN = 1.0000
+RF00015:	TP = 11	FP = 0	TN = 137	FN = 3	SP = 1.0000	SN = 0.7857
+RF02003:	TP = 9	FP = 1	TN = 141	FN = 0	SP = 0.9930	SN = 1.0000
+RF00059:	TP = 13	FP = 4	TN = 127	FN = 7	SP = 0.9695	SN = 0.6500
+RF00379:	TP = 4	FP = 28	TN = 111	FN = 8	SP = 0.7986	SN = 0.3333
+RF01794:	TP = 10	FP = 0	TN = 141	FN = 0	SP = 1.0000	SN = 1.0000
+RF01055:	TP = 2	FP = 0	TN = 132	FN = 17	SP = 1.0000	SN = 0.1053
+RF00557:	TP = 18	FP = 0	TN = 131	FN = 2	SP = 1.0000	SN = 0.9000
+RF00162:	TP = 3	FP = 14	TN = 133	FN = 1	SP = 0.9048	SN = 0.7500
+RF00380:	TP = 6	FP = 26	TN = 119	FN = 0	SP = 0.8207	SN = 1.0000
+SP = 0.9423
+SN = 0.7749
+

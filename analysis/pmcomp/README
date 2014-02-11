@@ -1,9 +1,9 @@
 HDOTALIGNER=/home/stesee/DotAligner
 PROG=pmcomp
-#DATA=seed_10_55.new
-DATA=seed_56_95.new
-#NRSPLIT=120
-NRSPLIT=126
+DATA=seed_10_55.new
+#DATA=seed_56_95.new
+NRSPLIT=120
+#NRSPLIT=126
 
 #module load /share/ClusterShare/Modules/modulefiles/contrib/gi/ViennaRNA/2.1.3
 #RNAfold -p2 --noLP

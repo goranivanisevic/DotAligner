@@ -36,7 +36,7 @@ int main( int argc, char ** argv )
         vector<float> probDbl_2;
         vector<float> probSgl_1;
         vector<float> probSgl_2;
-        int len_1 = 0, len_2 = 0, len_aln = 0;
+        int len_1 = 0, len_2 = 0, len_pair = 0, len_aln = 0;
         string name1, name2, seq_1, seq_2;
         int precision = 4;
         int maxshift = INFINITE;
@@ -124,7 +124,7 @@ int main( int argc, char ** argv )
                  cerr << "Could not open file " << filename1 << endl;
                  exit(EXIT_FAILURE);
             }
-            len_1 = len_aln = readinput(inputfile1, name1, seq_1, probDbl_1);
+            len_1 = len_pair = readinput(inputfile1, name1, seq_1, probDbl_1);
             inputfile1.close();
         }
         else {
@@ -244,39 +244,39 @@ int main( int argc, char ** argv )
 		}
 
 		/* STEP 2: find best local (or global) path through similarity matrix */
-		simalign_affinegaps( sim, len_1, len_2, idx_1_aln, idx_2_aln, len_aln, setglobal2_flag, setprintmatrix_flag, F, Q, P, trF, trQ, trP );
+		simalign_affinegaps( sim, len_1, len_2, idx_1_aln, idx_2_aln, len_pair, len_aln, setglobal2_flag, setprintmatrix_flag, F, Q, P, trF, trQ, trP );
 
 		#if DEBUG
-			cout << "\tGaps_1 = " << len_1-len_aln << "\tGaps_2 = " << len_2-len_aln << endl;
-			for( int i=0; i<len_aln; i++ ) cout << idx_1_aln[ i ] << "\t"; cout << endl;
-			for( int j=0; j<len_aln; j++ ) cout << idx_2_aln[ j ] << "\t"; cout << endl;
-			cout << "probDbl_1: " << len_aln << endl;
-			for( int i=0; i<len_aln; i++) for( int j=0; j<len_aln; j++ ) cout << probDbl_1[ idx_1_aln[ i ]*len_1 + idx_1_aln[ j ] ] << "\t"; cout << endl;
-			cout << "probDbl_2: " << len_aln << endl;
-			for( int i=0; i<len_aln; i++) for( int j=0; j<len_aln; j++ ) cout << probDbl_2[ idx_2_aln[ i ]*len_2 + idx_2_aln[ j ] ] << "\t"; cout << endl;
+			cout << "\tGaps_1 = " << len_1-len_pair << "\tGaps_2 = " << len_2-len_pair << endl;
+			for( int i=0; i<len_pair; i++ ) cout << idx_1_aln[ i ] << "\t"; cout << endl;
+			for( int j=0; j<len_pair; j++ ) cout << idx_2_aln[ j ] << "\t"; cout << endl;
+			cout << "probDbl_1: " << len_pair << endl;
+			for( int i=0; i<len_pair; i++) for( int j=0; j<len_pair; j++ ) cout << probDbl_1[ idx_1_aln[ i ]*len_1 + idx_1_aln[ j ] ] << "\t"; cout << endl;
+			cout << "probDbl_2: " << len_pair << endl;
+			for( int i=0; i<len_pair; i++) for( int j=0; j<len_pair; j++ ) cout << probDbl_2[ idx_2_aln[ i ]*len_2 + idx_2_aln[ j ] ] << "\t"; cout << endl;
 		#endif
 
 		/* calculate final similarity */
 		float similarity = 0.;
 		int open = 0, extended = 0;
-		for( int i=0; i<len_aln; i++ )
-			similarity += nwdp( seq_1, probDbl_1, probSgl_1, i, idx_1_aln, len_aln, seq_2, probDbl_2, probSgl_2, i, idx_2_aln, len_aln, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 0, setprintmatrix_flag, F, Q, P, trF, trQ, trP );
-		affinegapcosts(idx_1_aln, idx_2_aln, len_aln, open, extended);
-		//cout << similarity << " " << alpha*open << " " << beta*extended << " " << len_aln << " " << extended << endl;
-		similarity = ( len_aln ) ? ( similarity + alpha * open + beta * extended ) / len_aln + 0.5 : 0;
+		for( int i=0; i<len_pair; i++ )
+			similarity += nwdp( seq_1, probDbl_1, probSgl_1, i, idx_1_aln, len_pair, seq_2, probDbl_2, probSgl_2, i, idx_2_aln, len_pair, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 0, setprintmatrix_flag, F, Q, P, trF, trQ, trP );
+		affinegapcosts(idx_1_aln, idx_2_aln, len_pair, open, extended);
+		//cout << similarity << " " << alpha*open << " " << beta*extended << " " << " " << len_pair << " " << len_aln << " " << extended << endl;
+		similarity = ( len_pair ) ? ( similarity + alpha * open + beta * extended ) / len_aln + 0.5 : 0;
 
 		/* OUTPUT */
 
 		/* print aligned probabilities and similarity */
-		cout << "Similarity = " << similarity << ", Length_1 = " << len_1 << ", Unaligned_1 = " << len_1-len_aln;
-		cout << ", Length_2 = " << len_2 << ", Unaligned_2 = " << len_2-len_aln << endl;
+		cout << "Similarity = " << similarity << ", Length_1 = " << len_1 << ", Unaligned_1 = " << len_1-len_pair;
+		cout << ", Length_2 = " << len_2 << ", Unaligned_2 = " << len_2-len_pair << endl;
 
 		/* print sequences aligned by dot plot alignment */
 		#if DEBUG
-			for( int i=0; i<len_aln; i++ ) cout << idx_1_aln[ i ] << ","; cout << endl;
-			for( int j=0; j<len_aln; j++ ) cout << idx_2_aln[ j ] << ","; cout << endl;
+			for( int i=0; i<len_pair; i++ ) cout << idx_1_aln[ i ] << ","; cout << endl;
+			for( int j=0; j<len_pair; j++ ) cout << idx_2_aln[ j ] << ","; cout << endl;
 		#endif
-		printalign(seq_1, idx_1_aln, seq_2, idx_2_aln, len_aln);
+		printalign(seq_1, idx_1_aln, seq_2, idx_2_aln, len_pair);
 
 		/* free memory */
 		freeMatrix(sim, len_2);

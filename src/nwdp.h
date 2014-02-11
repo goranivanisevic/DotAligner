@@ -68,7 +68,7 @@ extern float max3( float f1, float f2, float f3, char* ptr );
 extern float max( float f1, float f2 );
 template <typename T>
 extern void print_matrixdp( T ** F, float * prob_1, int len_1, float * prob_2, int len_2 );
-extern float simalign_affinegaps( float ** Z, int len_1, int len_2, int * idx_1_aln, int * idx_2_aln, int & len_aln, bool global2, bool prm, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP );
+extern float simalign_affinegaps( float ** Z, int len_1, int len_2, int * idx_1_aln, int * idx_2_aln, int & len_pair, int & len_aln, bool global2, bool prm, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP );
 extern void affinegapcosts( int * idx_1_aln, int * idx_2_aln, int & len_aln, int & open, int & extended );
 extern void nwdp_initTB( char ** traceback, int L1, int L2 );
 extern void reverse( int * list, int len );

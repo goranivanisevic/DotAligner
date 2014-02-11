@@ -217,11 +217,11 @@ int nwdp_seed( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_
 	/* run simalign_affinegaps */
 	int *tmp_idx_seed_aln = new int[seedlen];
 	int *tmp_idx_max_aln = new int[maxlen];
-	int len_seed_aln;
+	int len_seed_pair, len_seed_aln;
 	if( len_2 > len_1 )
-		simalign_affinegaps( seedsim, seedlen, maxlen, tmp_idx_seed_aln, tmp_idx_max_aln, len_seed_aln, 0, 0, F, Q, P, trF, trQ, trP );
+		simalign_affinegaps( seedsim, seedlen, maxlen, tmp_idx_seed_aln, tmp_idx_max_aln, len_seed_pair, len_seed_aln, 0, 0, F, Q, P, trF, trQ, trP );
 	else
-		simalign_affinegaps( seedsim, maxlen, seedlen, tmp_idx_max_aln, tmp_idx_seed_aln, len_seed_aln, 0, 0, F, Q, P, trF, trQ, trP );
+		simalign_affinegaps( seedsim, maxlen, seedlen, tmp_idx_max_aln, tmp_idx_seed_aln, len_seed_pair, len_seed_aln, 0, 0, F, Q, P, trF, trQ, trP );
 	int offset = tmp_idx_max_aln[ 0 ];
 
     /* free memory */
@@ -270,7 +270,6 @@ int nwseq_seed( string seq_1, string seq_2, float ** F, char ** trF )
 	            case 'C':  x = 1 ;  break ;
 	            case 'G':  x = 2 ;  break ;
 	            case 'T':  x = 3 ;  break ;
-	            case 'U':  x = 3 ;  break ;
 	        }
 
 	        nuc = seq_2[ j-1 ] ;
@@ -281,7 +280,6 @@ int nwseq_seed( string seq_1, string seq_2, float ** F, char ** trF )
 	            case 'C':  y = 1 ;  break ;
 	            case 'G':  y = 2 ;  break ;
 	            case 'T':  y = 3 ;  break;
-	            case 'U':  y = 3 ;  break ;
 	        }
 
 	        fU = F[ j-1 ][ i ] + d ;
@@ -332,7 +330,7 @@ int nwseq_seed( string seq_1, string seq_2, float ** F, char ** trF )
 		for( int k = 0; k <= L2; k++ ) tempidx_2[ k ] = (float) k;
 		cout << "F:" << endl;
 		print_matrixdp( F, tempidx_1, L1, tempidx_2, L2);
-		print_matrixdp( trF, tempidx_1, L1, tempidx_2, L2);
+		print_matrixdp( trF, tempidx_1, L1, tempidx_2, L2);*/
 	#endif
 	cerr << "SEQALN: Seq_1 ( " << i << ", " << li << " ); Seq_2 ( " << j << ", " << lj << " )" << endl;
 
@@ -437,7 +435,7 @@ float nwdb_global_align_affinegaps( float* probDbl_1, float* probSgl_1, int L1, 
             trQ[ j ][ i ] =  ptr;
 
 			// calculate F
-            tau = ( probDbl_1[ i-1 ]==0 && probDbl_2[ j-1 ]==0 ) ? deltanull : 0.5 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
+			tau = ( probDbl_1[ i-1 ]==0 && probDbl_2[ j-1 ]==0 ) ? deltanull : 0.5 - abs( probDbl_1[ i-1 ] - probDbl_2[ j-1 ] );
     		tau *= ( 1 - kappa );
     		sigma = ( probSgl_1[ i-1 ]==0 && probSgl_2[ j-1 ]==0 ) ? deltanull : 0.5 - abs( probSgl_1[ i-1 ] - probSgl_2[ j-1 ] );
     		tau += kappa * sigma;
@@ -560,7 +558,7 @@ void print_matrixdp( T ** F, float * prob_1, int L1, float * prob_2, int L2 )
 }
 
 
-float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * idx_2_aln, int & Laln, bool global, bool prm, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP )
+float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * idx_2_aln, int & Lpair, int & Laln, bool global, bool prm, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP )
 {
     int i = 0, j = 0;
     float sim;
@@ -641,6 +639,7 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
 
     /* backtracking */
     int k = 0;
+    int w = 0;
     while( i > 0 || j > 0 )
     {
     	if( !global )
@@ -656,6 +655,7 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
         			 	 case '\\': idx_1_aln[ k ] = i-1;
         			 	 	 	 	idx_2_aln[ k++ ] = j-1;
         			 	 	 	 	i--; j--;
+        			 	 	 	 	w++;
         			 	 	 	 	break ;
         			 	 case '-' : maxmat = 2;
         			 	 	 	 	break;
@@ -664,9 +664,11 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
     		 case 1: switch( trP[ j ][ i ] )
     				 {
     		 	 	 	 case '|' : j--;
+    		 	 	 	 	 	 	w++;
     		 	 	 	 	 	 	break;
     		 	 	 	 case '\\': maxmat = 0;
     		 	 	 	 	 	 	j--;
+    		 	 	 	 	 	 	w++;
     		 	 	 	 	 	 	break;
     				 }
     				 break;
@@ -674,17 +676,20 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
     		 	 	 {
  	 	 	 	 	 	 case '\\': maxmat = 0;
  	 	 	 	 	 	 	 	 	i--;
+ 	 	 	 	 	 	 	 	 	w++;
  	 	 	 	 	 	 	 	 	break;
  	 	 	 	 	 	 case '-' : i--;
+ 	 	 	 	 	 	 	 	 	w++;
  	 	 	 	 	 	 	 	 	break;
     		 	 	 }
     		 	 	 break;
     	}
     }
 
-    Laln = k;
-    reverse( idx_1_aln, Laln );
-    reverse( idx_2_aln, Laln );
+    Laln = w;
+    Lpair = k;
+    reverse( idx_1_aln, Lpair );
+    reverse( idx_2_aln, Lpair );
 
     if( prm ) {
         cout << "\nDynamic programming matrix: " << endl;
@@ -703,8 +708,8 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
     	print_matrixdp( trQ, tempidx_1, L1, tempidx_2, L2);
         free(tempidx_1);
         free(tempidx_2);
-        for(int i=0; i<Laln; i++){cerr << idx_1_aln[i] << " ";} cerr << endl;
-        for(int i=0; i<Laln; i++){cerr << idx_2_aln[i] << " ";} cerr << endl;
+        for(int i=0; i<Lpair; i++){cerr << idx_1_aln[i] << " ";} cerr << endl;
+        for(int i=0; i<Lpair; i++){cerr << idx_2_aln[i] << " ";} cerr << endl;
     }
 	cerr << "STRUCTALN: Seq_1 ( " << i << ", " << li << " ); Seq_2 ( " << j << ", " << lj << " )" << endl;
 
