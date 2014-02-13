@@ -1,0 +1,24 @@
+#!/bin/bash
+##################################################################################
+#####
+#####		LocaRNA launcher for SGE queue management
+#####
+################################# SGE submission options  
+#$ -cwd                       	# Change to current working directory 
+#$ -V                         	# Export environment variables into script 
+#$ -S /bin/bash			# Enforce bash (don't touch!!!!)
+
+PAIRWISE_LIST=$1
+
+if [[ ! -d "${PAIRWISE_LIST%/*}/out" ]]; then 
+  mkdir ${PAIRWISE_LIST%/*}/out 
+fi
+
+SUBSET=$(ls ${PAIRWISE_LIST%/*}/subset_??? | head -n ${SGE_TASK_ID} | tail -n 1) 
+
+cat $SUBSET | while read line ; do
+    echo "----------" &>> $SUBSET.locarna_local
+    echo "ALIGNING	"$line &>> $SUBSET.locarna_local
+    { time locarna --free-endgaps=L1,L2,R1,R2 --sequ-local=true --noLP `echo ${line} | cut -d " " -f 1-2`; }  &>> $SUBSET.locarna_local
+done
+	
