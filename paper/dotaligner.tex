@@ -29,11 +29,13 @@
 \newcommand\pmmulti{\texttt{pmmulti}}
 \newcommand\clustgraph{\texttt{ClustGraph}}
 \newcommand\locarna{\texttt{LocaRNA}}
+\newcommand\foldalign{\texttt{FOLDALIGN}}
 \newcommand\rnaplfold{\texttt{RNAplfold}}
 \newcommand\pvclust{\texttt{pvclust}}
 \newcommand\carna{\texttt{CARNA}}
 \newcommand\petfold{\texttt{PETfold}}
 \newcommand\rnalocal{\texttt{RNAlocal}}
+\newcommand\nw{\texttt{Needleman-Wunsch}}
 \newcommand\eg{\textit{e.g.}}
 \newcommand{\RED}[1]{\textcolor{red}{#1}}
 
@@ -466,6 +468,30 @@ We employed the BuildRfamBenchmark JAVA program from (Smith M et al. NAR 2013) t
 \subsection{Complete RFAM sequences}
 
 Global alignment. More emphasis on quantitative clustering, accuracy, and correlation with control. 
+
+\begin{tabular}{|l|c|c|c|}
+\hline 
+ & \multicolumn{3}{c|}{SeqId 10 \ldots 55} \\
+ & SP & SN & Time [s] \\ 
+\hline 
+\dotaligner & 84.1 & 64.8 & 7.2 \\ 
+\carna & ? & ? & ? \\ 
+\locarna & 96.9 & 54.0 & ? \\ 
+\foldalign & 88.6 & 73.7 & 34.8 \\ 
+\pmcomp & 97.9 & 35.7 & 289.9 \\ 
+\nw & 92.6 & 54.6 & 0.002 \\
+\hline 
+\hline 
+ & \multicolumn{3}{c|}{SeqId 56 \ldots 95} \\
+ & SP & SN & Time [s] \\ 
+\dotaligner & 100 & 86.4 & 7.1 \\ 
+\carna & ? & ? & ? \\ 
+\locarna & ? & ? & ? \\ 
+\foldalign & 97.2 & 79.7 & 37.5 \\ 
+\pmcomp & 100 & 64.5 & 338.4 \\ 
+\nw & 91.8 & 90.2 & 0.002 \\
+\hline 
+\end{tabular} 
 
 
 \subsection{Fragmented RFAM sequences} 
