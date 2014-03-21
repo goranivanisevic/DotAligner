@@ -1,0 +1,16 @@
+#!/bin/bash
+
+################################# SGE submission options
+#$ -cwd                       	# Change to current working directory
+#$ -V                         	# Export environment variables into script
+#$ -S /bin/bash					# Enforce bash (don't touch!!!!)
+
+PAIRWISE_LIST=$1
+
+SUBSET=$(ls ${PAIRWISE_LIST%/*}/array_??? | head -n ${SGE_TASK_ID} | tail -n 1)
+
+cat $SUBSET | while read line ; do
+    echo "----------" &>> $SUBSET.carna
+    echo "ALIGNING	"$line &>> $SUBSET.carna
+    { time carna --noLP `echo ${line} | cut -d " " -f 1-2` --write-structure --time-limit=300000 ; }  &>> $SUBSET.carna
+done
