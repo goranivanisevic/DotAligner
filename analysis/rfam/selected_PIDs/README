@@ -1,0 +1,12 @@
+#make seed_10_55.new.pp.tgz
+DATA=seed_10_55.new
+cd $DATA
+for i in `perl -e 'for($i=2; $i<=453; $i+=3){print $i." "}'`; do
+  head -${i} ../${DATA}.fasta | tail -2 | awk '{if(/^>/){split($1,a,/\//);print a[1]}else{print $1}}' > tmp.${DATA}.fa;
+  RNAfold -p2 < tmp.${DATA}.fa 2> /dev/null;
+done
+
+#get fasta files
+HDOTALIGNER=/home/stesee/DotAligner
+DATA=seed_10_55.new; for i in `perl -e 'for($i=2; $i<=454; $i+=3){print $i." "}'`; do FNAME=`head -${i} ${HDOTALIGNER}/analysis/rfam/selected_PIDs/${DATA}.fasta | tail -2 | awk '$1~/^>/{sub(/^>/,"");split($1,a,/\//); print a[1]}'`; head -${i} ${HDOTALIGNER}/analysis/rfam/selected_PIDs/${DATA}.fasta | tail -2 > ${DATA}/${FNAME}.fa ; done
+DATA=seed_56_95.new; for i in `perl -e 'for($i=2; $i<=461; $i+=3){print $i." "}'`; do FNAME=`head -${i} ${HDOTALIGNER}/analysis/rfam/selected_PIDs/${DATA}.fasta | tail -2 | awk '$1~/^>/{sub(/^>/,"");split($1,a,/\//); print a[1]}'`; head -${i} ${HDOTALIGNER}/analysis/rfam/selected_PIDs/${DATA}.fasta | tail -2 > ${DATA}/${FNAME}.fa ; done

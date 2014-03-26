@@ -6,7 +6,7 @@ mkdir ${PTDOTALIGNER}/data/rfam_pairwise_threesomes
 
 #get 192 job commands
 ./runDotAligner4Tuning.sh > testit.sh
-split -l 1512 -a 3 -d testit.sh ${PTDOTALIGNER}/jobs/dotaligner4tuning
+split -l 504 -a 3 -d testit.sh ${PTDOTALIGNER}/jobs/dotaligner4tuning
 rm testit.sh
 for i in `perl -e '{for(my $i=191; $i>=0; $i--){printf("%03i ",$i)}}'`; do cat jobs/dotaligner4tuning${i} | awk -v i=$i '{gsub("dotaligner.out","dotaligner"i".out"); print $0}' > tmp.out; mv tmp.out jobs/dotaligner4tuning${i}; j=`echo "" | awk -v i=$i '{print i+1}'`; mv jobs/dotaligner4tuning${i} jobs/dotaligner4tuning_${j}; done
 chmod 744 jobs/dotaligner4tuning*
@@ -21,55 +21,54 @@ gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.gz | awk 'BEGIN{OFS=","}{
 #calculate SPS (sum-of-pairs score)
 for i in `perl -e 'for($i=6; $i<=252; $i+=6){print $i." "}'`; do
   head -${i} ${PTDOTALIGNER}/rfam_pairwise_threesomes.fasta | tail -6 | awk '{if(NR==1 || NR==2 || NR==4 || NR==5){print $0}else{gsub(/</,"(");gsub(/>/,")");print ">structure\n"$0}}' > tmp.rfam_pairwise_threesomes.fasta;
-  FNAME=`awk 'BEGIN{idx=1}/^>/{sub(/^>/,"");fname[idx]=$1;idx++}END{print fname[1]"__"fname[3]}' tmp.rfam_pairwise_threesomes.fasta`
-  removeGapsInFasta.pl tmp.rfam_pairwise_threesomes.fasta > rdraw some beautiful graphs
-ef_${fname}.fa;
-  awk 'nr==1 || nr==2 || nr==5 || nr==6{print $0}' ref_${fname}.fa > ref_${fname}.fasta;
+  FNAME=`awk 'BEGIN{idx=1}/^>/{sub(/^>/,"");FNAME[idx]=$1;idx++}END{print FNAME[1]"__"FNAME[3]}' tmp.rfam_pairwise_threesomes.fasta`
+  removeGapsInFasta.pl tmp.rfam_pairwise_threesomes.fasta > ref_${FNAME}.fa;
+  awk 'NR==1 || NR==2 || NR==5 || NR==6{print $0}' ref_${FNAME}.fa > ref_${FNAME}.fasta;
 done
 rm -f tmp.sps.txt
-gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz | sed 's/\.pp//g' | while read line; do
-  rfam1=${line%%,*};
-  temp=${line#*,};
-  rfam2=${temp%%,*};
-  echo $line | awk -f "," '{gsub("-",".",$14);gsub("-",".",$15);print ">"$1"\n"$14"\n>"$2"\n"$15}' > test_aln.fa
-  getsps.pl ref_${rfam1}__${rfam2}.fasta test_aln.fa >> tmp.sps.txt
+gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz | sed 's/\.pp//g' | while read LINE; do
+  RFAM1=${LINE%%,*};
+  TEMP=${LINE#*,};
+  RFAM2=${TEMP%%,*};
+  echo $LINE | awk -F "," '{gsub("-",".",$14);gsub("-",".",$15);print ">"$1"\n"$14"\n>"$2"\n"$15}' > test_aln.fa
+  getSPS.pl ref_${RFAM1}__${RFAM2}.fasta test_aln.fa >> tmp.sps.txt
 done
 paste <(gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz) tmp.sps.txt | awk '{print $1","$4}' | gzip > tmp.dotaligner4tuning.csv.gz
 mv tmp.dotaligner4tuning.csv.gz ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz
 
 #calculate sci (structure conservation index) based on free energy of the thermodynamic ensemble 
 #using rnaalifold for pairwise alignment and rnafold for single sequences
-for i in ${ptdotaligner}/data/rfam_pairwise_threesomes/*.fasta; do
-  rnafold -p2 < $i 2> /dev/null | sed -n 4p | awk -v id=$i '{sub(/\[/,"",$nf);sub(/\]/,"",$nf); print id,$nf}' >> ${ptdotaligner}/data/rfam_pairwise_threesomes/rfam_pairwise_threesomes.energyensemble;
+for i in ${PTDOTALIGNER}/data/rfam_pairwise_threesomes/*.fasta; do
+  RNAfold -p2 < $i 2> /dev/null | sed -n 4p | awk -v id=$i '{sub(/\[/,"",$nf);sub(/\]/,"",$nf); print id,$nf}' >> ${PTDOTALIGNER}/data/rfam_pairwise_threesomes/rfam_pairwise_threesomes.energyensemble;
 done
 rm -f tmp.sci.txt
-data=${ptdotaligner}/data/rfam_pairwise_threesomes
-gunzip -c ${ptdotaligner}/output/dotaligner4tuning.out.csv.gz | sed 's/\.pp//g' | while read line; do
-  rfam1=${line%%,*};
-  temp=${line#*,};
-  rfam2=${temp%%,*};
-  echo $line | awk -f "," '{gsub("-",".",$14);gsub("-",".",$15);print ">"$1"\n"$14"\n>"$2"\n"$15}' | fa2aln.pl - > test_aln.aln
-  alienergyensemble=`rnaalifold -p2 -r < test_aln.aln 2> /dev/null | sed -n 3p | awk '{sub(/\[/,"",$nf);sub(/\]/,"",$nf); print $nf}'`
-  seq1energyensemble=`grep $rfam1 ${data}/rfam_pairwise_threesomes.energyensemble | cut -d" " -f2`
-  seq2energyensemble=`grep $rfam2 ${data}/rfam_pairwise_threesomes.energyensemble | cut -d" " -f2`
-  echo "sci" | awk -v econs=$alienergyensemble -v eseq1=$seq1energyensemble -v eseq2=$seq2energyensemble '{ printf("%5.3f\t%5.3f\t%5.3f\t%6.5f\n", econs, eseq1, eseq2, (2 * econs / ( eseq1 + eseq2 ))) }' >> tmp.sci.txt
+data=${PTDOTALIGNER}/data/rfam_pairwise_threesomes
+gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz | sed 's/\.pp//g' | while read LINE; do
+  RFAM1=${LINE%%,*};
+  TEMP=${LINE#*,};
+  RFAM2=${TEMP%%,*};
+  echo $LINE | awk -f "," '{gsub("-",".",$14);gsub("-",".",$15);print ">"$1"\n"$14"\n>"$2"\n"$15}' | fa2aln.pl - > test_aln.aln
+  ALIENERGYENSEMBLE=`RNAalifold -p2 -r < test_aln.aln 2> /dev/null | sed -n 3p | awk '{sub(/\[/,"",$nf);sub(/\]/,"",$nf); print $nf}'`
+  SEQ1ENERGYENSEMBLE=`grep $RFAM1 ${data}/rfam_pairwise_threesomes.energyensemble | cut -d" " -f2`
+  SEQ2ENERGYENSEMBLE=`grep $RFAM2 ${data}/rfam_pairwise_threesomes.energyensemble | cut -d" " -f2`
+  echo "sci" | awk -v econs=$ALIENERGYENSEMBLE -v eseq1=$SEQ1ENERGYENSEMBLE -v eseq2=$SEQ2ENERGYENSEMBLE '{ printf("%5.3f\t%5.3f\t%5.3f\t%6.5f\n", econs, eseq1, eseq2, (2 * econs / ( eseq1 + eseq2 ))) }' >> tmp.sci.txt
 done
 paste <(gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz) tmp.sci.txt | awk '{print $1","$5}' | gzip > tmp.dotaligner4tuning.csv.gz
 mv tmp.dotaligner4tuning.csv.gz ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz
 
 #calculate mcc of rfam consensus structure to rnaalifold structure
 rm -f tmp.mcc.txt
-gunzip -c ${ptdotaligner}/output/dotaligner4tuning.out.csv.gz | sed 's/\.pp//g' | while read line; do
-  rfam1=${line%%,*};
-  temp=${line#*,};
-  rfam2=${temp%%,*};
-  #removebpinalignment.pl ref_${rfam1}__${rfam2}.fa | awk 'begin{ors=""}{if(nr==1 || nr==5){ sub(/^>/,"");print $1"\t" }else{ if(nr==2 || nr==6 ){ gsub(/\./,"-");print $1"\t" }else{ if(nr==4 || nr==8){ print $1"\n" } } }}' > ref.ccinput
-  awk 'begin{ors=""}{if(nr==1 || nr==5){ sub(/^>/,"");print $1"\t" }else{ if(nr==2 || nr==6 ){ gsub(/\./,"-");print $1"\t" }else{ if(nr==4 || nr==8){ print $1"\n" } } }}' ref_${rfam1}__${rfam2}.fa > ref.ccinput
-  echo $line | awk -f "," '{gsub("-",".",$14);gsub("-",".",$15);print ">"$1"\n"$14"\n>"$2"\n"$15}' | fa2aln.pl - > test_aln.aln
-  testcons=`rnaalifold -p2 -r < test_aln.aln 2> /dev/null | sed -n 2p | cut -d" " -f1` 
+gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz | sed 's/\.pp//g' | while read LINE; do
+  RFAM1=${LINE%%,*};
+  TEMP=${LINE#*,};
+  RFAM2=${TEMP%%,*};
+  #removebpinalignment.pl ref_${RFAM1}__${RFAM2}.fa | awk 'begin{ors=""}{if(nr==1 || nr==5){ sub(/^>/,"");print $1"\t" }else{ if(nr==2 || nr==6 ){ gsub(/\./,"-");print $1"\t" }else{ if(nr==4 || nr==8){ print $1"\n" } } }}' > ref.ccinput
+  awk 'begin{ors=""}{if(nr==1 || nr==5){ sub(/^>/,"");print $1"\t" }else{ if(nr==2 || nr==6 ){ gsub(/\./,"-");print $1"\t" }else{ if(nr==4 || nr==8){ print $1"\n" } } }}' ref_${RFAM1}__${RFAM2}.fa > ref.ccinput
+  echo $LINE | awk -f "," '{gsub("-",".",$14);gsub("-",".",$15);print ">"$1"\n"$14"\n>"$2"\n"$15}' | fa2aln.pl - > test_aln.aln
+  testcons=`RNAalifold -p2 -r < test_aln.aln 2> /dev/null | sed -n 2p | cut -d" " -f1` 
   #tail -3 test_aln.aln | head -2 | awk -v cons=$testcons 'begin{ofs="\t"}{print $1,$2,cons}' | awk 'begin{ofs="\n"}{print ">"$1,$2,">structure",$3}' | removebpinalignment.pl - | awk 'begin{ors=""}{if(nr==1 || nr==5){ sub(/^>/,"");print $1"\t" }else{ if(nr==2 || nr==6 ){ gsub(/\./,"-");print $1"\t"}else{ if(nr==4 || nr==8){ print $1"\n" } } }}' > test.ccinput
   tail -3 test_aln.aln | head -2 | awk -v cons=$testcons 'begin{ofs="\t"}{print $1,$2,cons}' > test.ccinput
-  structurecc -f=test.ccinput ref.ccinput | awk 'begin{s=0}{s=s+$8}end{if(nr==0){print "0"}else{cc=s/nr;if(cc<0){cc=0};print cc}}' >> tmp.mcc.txt
+  structureCC -f=test.ccinput ref.ccinput | awk 'begin{s=0}{s=s+$8}end{if(nr==0){print "0"}else{cc=s/nr;if(cc<0){cc=0};print cc}}' >> tmp.mcc.txt
 done
 paste <(gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz) tmp.mcc.txt | awk '{print $1","$2}' | gzip > tmp.dotaligner4tuning.csv.gz
 mv tmp.dotaligner4tuning.csv.gz ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz
@@ -77,7 +76,7 @@ mv tmp.dotaligner4tuning.csv.gz ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv
 #analyze data
 #K A B R T L S M SEQALN
 gunzip -c ${PTDOTALIGNER}/output/dotaligner4tuning.out.csv.gz | awk '{gsub(/,/,"\t");print $0}' | sort -k18gr | less
-gunzip -c output/dotaligner4tuning.out.csv.gz | awk '{gsub(/,/,"\t");print $0}' > dotaligner4tuning.out.tab
+gunzip -c dotaligner4tuning.out.csv.gz | awk '{gsub(/,/,"\t");print $0}' > dotaligner4tuning.out.tab
 uniqCol1concatCol2.pl dotaligner4tuning.out.tab 4,5,6,7,8,9,10,11,12 17 > dotaligner4tuning.concat_sps
 uniqCol1concatCol2.pl dotaligner4tuning.out.tab 4,5,6,7,8,9,10,11,12 16 > dotaligner4tuning.concat_time
 uniqCol1concatCol2.pl dotaligner4tuning.out.tab 4,5,6,7,8,9,10,11,12 18 > dotaligner4tuning.concat_sci
@@ -155,6 +154,172 @@ awk '{split($10,a,",");l=length(a);s=0;for(i=1;i<=l;i++){s+=a[i]};print $0,(s/l)
 #0.3	0	0	0	0.25	0.5	0	25	FALSE	0.641261	16.1819	2.09648	0.222679
 #0.3	0	0	0	0.5	0.5	0	25	FALSE	0.641261	16.1224	2.09648	0.222679
 #0.5	-0.05	-0.05	10	0.25	0.5	0	25	FALSE	0.643783	16.9631	2.09633	0.159
+
+#all m15
+sort -k10gr dotaligner4tuning_m15.concat_sps_time_sci_mcc | head
+0.3	-0.2	0	0	0.25	0	0	15	FALSE	0.672493	10.6519	1.95655	0.265476
+0.3	-0.2	0	0	0.5	0	0	15	FALSE	0.672493	10.4549	1.95655	0.265476
+0.3	-0.1	-0.05	0	0.25	0	0	15	FALSE	0.670517	10.9579	1.93535	0.272202 ***
+0.3	-0.1	-0.05	0	0.5	0	0	15	FALSE	0.670517	10.8134	1.93535	0.272202
+0.3	-0.2	0	0	0.25	0	FALSE	15	TRUE	0.670283	10.4492	1.91045	0.260917
+0.3	-0.2	0	0	0.5	0	FALSE	15	TRUE	0.670283	10.3588	1.91045	0.260917
+0.1	-0.05	0	0	0.25	0	0	15	FALSE	0.668933	10.4745	1.95704	0.279988
+0.1	-0.05	0	0	0.5	0	0	15	FALSE	0.668933	10.6579	1.95704	0.279988
+0.5	-0.2	-0.05	0	0.25	0	0	15	FALSE	0.668851	10.8715	1.94126	0.233774
+0.5	-0.2	-0.05	0	0.5	0	0	15	FALSE	0.668851	10.8758	1.94126	0.233774
+[11:51:55][output]$ sort -k12gr dotaligner4tuning_m15.concat_sps_time_sci_mcc | head
+0.5	-0.05	-0.05	10	0.5	0.5	0	15	FALSE	0.645138	10.9591	2.09043	0.156333
+0.5	-0.05	-0.05	5	0.25	0.5	0	15	FALSE	0.644979	10.6014	2.08977	0.156012
+0.5	-0.05	-0.05	10	0.25	0.5	0	15	FALSE	0.644657	11.037	2.08963	0.155976
+0.5	-0.05	-0.05	5	0.5	0.5	0	15	FALSE	0.644793	10.9322	2.08708	0.156238
+0.3	0	-0.1	0	0.25	0.5	15	15	FALSE	0.643641	13.5366	2.08687	0.301631
+0.5	-0.05	-0.05	0	0.25	0.5	0	15	FALSE	0.644399	10.5754	2.08651	0.160869
+0.5	-0.05	-0.05	0	0.5	0.5	0	15	FALSE	0.644399	10.4925	2.08651	0.160869
+0.3	0	0	0	0.25	0.5	15	15	FALSE	0.640608	13.6525	2.08349	0.221143
+0.3	0	0	0	0.5	0.5	15	15	FALSE	0.640608	13.2626	2.08349	0.221143
+0.3	0	0	5	0.25	0.5	15	15	FALSE	0.639929	13.4926	2.08162	0.21969
+[11:52:00][output]$ sort -k13gr dotaligner4tuning_m15.concat_sps_time_sci_mcc | head
+0.1	-0.1	0	0	0.25	0	15	15	FALSE	0.657604	13.4483	1.92455	0.333786
+0.1	-0.1	0	0	0.5	0	15	15	FALSE	0.657604	13.4056	1.92455	0.333786
+0.3	-0.05	-0.05	5	0.5	0.5	FALSE	15	TRUE	0.635171	10.3956	1.95611	0.3225
+0.3	-0.05	-0.05	5	0.5	0.5	0	15	FALSE	0.643068	10.4013	1.97027	0.321488 ***
+0.5	-0.2	-0.1	10	0.25	0.5	15	15	FALSE	0.645255	14.1702	1.92966	0.320488
+0.3	-0.05	-0.05	5	0.5	0.5	15	15	FALSE	0.645574	13.6109	1.96467	0.320464
+0.5	-0.2	-0.1	5	0.25	0	15	15	FALSE	0.598103	14.0225	1.89331	0.319571
+0.5	-0.2	-0.1	5	0.25	0.5	15	15	FALSE	0.644462	14.123	1.92957	0.319536
+0.3	-0.05	-0.05	5	0.25	0.5	FALSE	15	TRUE	0.629185	10.3243	1.94951	0.318988
+0.5	-0.2	-0.1	10	0.25	0.5	0	15	FALSE	0.645062	10.9283	1.9328	0.31894
+awk '$1==0.3 && $2==-0.05 && $3==-0.05 && $4==5 && $5==0.5 && $6==0.5 && $7==0 && $8==15 && $9=="FALSE"' dotaligner4tuning_m15.concat_sps_time_sci_mcc
+0.3	-0.05	-0.05	5	0.5	0.5	0	15	FALSE	0.643068	10.4013	1.97027	0.321488
+awk '$1==0.3 && $2==-0.1 && $3==-0.05 && $4==0 && $5==0.25 && $6==0 && $7==0 && $8==15 && $9=="FALSE"' dotaligner4tuning_m15.concat_sps_time_sci_mcc
+0.3	-0.1	-0.05	0	0.25	0	0	15	FALSE	0.670517	10.9579	1.93535	0.272202
+awk '$1==0.3 && $2==-0.1 && $3==-0.05 && $4==0 && $5==0.25 && $6==0.5 && $7==0 && $8==15 && $9=="FALSE"' dotaligner4tuning_m15.concat_sps_time_sci_mcc
+0.3	-0.1	-0.05	0	0.25	0.5	0	15	FALSE	0.644141	10.6978	1.89851	0.299476
+
+#PSI<=50 m15
+sort -k10gr dotaligner4tuning.concat_sps_time_sci_mcc | head
+0.3	-0.1	0	0	0.25	0	15	15	FALSE	0.445169	13.4199	1.85081	0.0361429
+0.3	-0.1	0	0	0.5	0	15	15	FALSE	0.445169	13.7019	1.85081	0.0361429
+0.5	-0.2	0	10	0.25	0	15	15	FALSE	0.445164	13.3596	1.85122	0.170357
+0.1	-0.05	0	0	0.25	0	0	15	FALSE	0.438469	9.97043	1.85639	0.144429
+0.1	-0.05	0	0	0.5	0	0	15	FALSE	0.438469	10.0033	1.85639	0.144429
+0.1	-0.1	0	0	0.25	0	0	15	FALSE	0.435812	9.99257	1.7962	0.20475
+0.1	-0.1	0	0	0.5	0	0	15	FALSE	0.435812	9.98929	1.7962	0.20475
+0.3	-0.2	-0.2	10	0.25	0.5	15	15	FALSE	0.434446	12.9994	1.6614	0.181143
+0.5	-0.2	-0.05	0	0.25	0	0	15	FALSE	0.433445	10.4536	1.90517	0.134429
+0.5	-0.2	-0.05	0	0.5	0	0	15	FALSE	0.433445	10.2931	1.90517	0.134429
+[12:02:30][output]$ sort -k12gr dotaligner4tuning.concat_sps_time_sci_mcc | head
+0.3	0	0	10	0.25	0.5	15	15	FALSE	0.385812	12.8968	2.06856	0.172143
+0.3	0	0	0	0.25	0.5	15	15	FALSE	0.386988	12.5796	2.06802	0.113607
+0.3	0	0	0	0.5	0.5	15	15	FALSE	0.386988	12.5336	2.06802	0.113607
+0.3	0	0	5	0.5	0.5	15	15	FALSE	0.389834	12.7324	2.06464	0.114214
+0.3	0	0	10	0.25	0.5	0	15	FALSE	0.372279	9.97557	2.05884	0.173714
+0.3	0	0	0	0.25	0.5	0	15	FALSE	0.373454	9.66443	2.0583	0.113607
+0.3	0	0	0	0.5	0.5	0	15	FALSE	0.373454	9.71821	2.0583	0.113607
+0.3	0	0	10	0.5	0.5	15	15	FALSE	0.389834	12.9082	2.05695	0.172143
+0.3	0	0	5	0.5	0.5	0	15	FALSE	0.3763	9.84157	2.05482	0.114214
+0.3	0	0	5	0.25	0.5	15	15	FALSE	0.386716	12.756	2.05272	0.113643
+[12:02:34][output]$ sort -k13gr dotaligner4tuning.concat_sps_time_sci_mcc | head
+0.5	-0.2	0	10	0.25	0.5	15	15	FALSE	0.419612	13.3103	1.88098	0.210357
+0.5	-0.2	0	10	0.5	0.5	15	15	FALSE	0.391149	13.4759	1.83896	0.210357
+0.5	-0.2	-0.1	10	0.25	0.5	15	15	FALSE	0.382832	13.0109	1.84626	0.210357
+0.5	-0.2	-0.1	10	0.5	0.5	15	15	FALSE	0.381379	13.0924	1.84397	0.210357
+0.5	-0.2	-0.1	5	0.25	0.5	15	15	FALSE	0.38083	13.0026	1.84342	0.210357
+0.5	-0.2	-0.1	5	0.5	0.5	15	15	FALSE	0.381734	12.866	1.83146	0.210357
+0.1	0	-0.1	0	0.25	0	FALSE	15	TRUE	0.390448	9.62721	1.69218	0.209679
+0.1	0	-0.1	0	0.5	0	FALSE	15	TRUE	0.390448	9.59979	1.69218	0.209679
+0.5	-0.1	-0.1	5	0.5	0.5	15	15	FALSE	0.39225	13.2093	1.88057	0.208143
+0.5	-0.2	0	10	0.25	0.5	0	15	FALSE	0.41648	10.3231	1.92947	0.205714
+awk '$1==0.3 && $2==-0.05 && $3==-0.05 && $4==5 && $5==0.5 && $6==0.5 && $7==0 && $8==15 && $9=="FALSE"' dotaligner4tuning.concat_sps_time_sci_mcc
+0.3	-0.05	-0.05	5	0.5	0.5	0	15	FALSE	0.371231	10.0653	1.87314	0.201571
+awk '$1==0.3 && $2==-0.1 && $3==-0.05 && $4==0 && $5==0.25 && $6==0 && $7==0 && $8==15 && $9=="FALSE"' dotaligner4tuning.concat_sps_time_sci_mcc
+0.3	-0.1	-0.05	0	0.25	0	0	15	FALSE	0.421907	10.6876	1.85817	0.168214
+awk '$1==0.3 && $2==-0.1 && $3==-0.05 && $4==0 && $5==0.25 && $6==0.5 && $7==0 && $8==15 && $9=="FALSE"' dotaligner4tuning.concat_sps_time_sci_mcc
+0.3	-0.1	-0.05	0	0.25	0.5	0	15	FALSE	0.358004	10.6181	1.77154	0.151964
+
+#PSI>50 m15
+sort -k10gr dotaligner4tuning.concat_sps_time_sci_mcc | head
+0.1	-0.1	0	0	0.25	0	15	15	FALSE	0.804766	13.9298	2.0607	0.403625
+0.1	-0.1	0	0	0.5	0	15	15	FALSE	0.804766	13.8895	2.0607	0.403625
+0.3	-0.1	-0.05	0	0.25	0	0	15	FALSE	0.794822	11.093	1.97393	0.324196
+0.3	-0.1	-0.05	0	0.5	0	0	15	FALSE	0.794822	10.8955	1.97393	0.324196
+0.1	-0.2	0	0	0.25	0	15	15	FALSE	0.793929	13.9209	2.03753	0.375321
+0.1	-0.2	0	0	0.5	0	15	15	FALSE	0.793929	14.0681	2.03753	0.375321
+0.3	-0.2	0	0	0.25	0	0	15	FALSE	0.792763	10.6365	2.0318	0.338911
+0.3	-0.2	0	0	0.25	0	FALSE	15	TRUE	0.792763	10.6384	1.97616	0.333875
+0.3	-0.2	0	0	0.5	0	0	15	FALSE	0.792763	10.5337	2.0318	0.338911
+0.3	-0.2	0	0	0.5	0	FALSE	15	TRUE	0.792763	10.4019	1.97616	0.333875
+[12:03:48][output]$ sort -k12gr dotaligner4tuning.concat_sps_time_sci_mcc | head
+0.1	-0.2	-0.1	10	0.5	0	0	15	FALSE	0.696711	10.4614	2.1485	0.325411
+0.1	-0.2	-0.1	10	0.5	0	FALSE	15	TRUE	0.696711	10.4035	2.1485	0.325411
+0.1	-0.2	-0.2	10	0.25	0	0	15	FALSE	0.692053	10.2984	2.14757	0.319411
+0.1	-0.2	-0.2	10	0.25	0	FALSE	15	TRUE	0.692053	10.3845	2.14757	0.319411
+0.5	0	-0.1	0	0.25	0	15	15	FALSE	0.761608	14.229	2.14386	0.212071
+0.5	0	-0.1	0	0.5	0	15	15	FALSE	0.761608	13.9994	2.14386	0.212071
+0.1	-0.2	0	10	0.5	0.5	0	15	FALSE	0.746305	10.597	2.14036	0.358161
+0.1	-0.2	0	10	0.5	0.5	15	15	FALSE	0.746305	13.8266	2.14036	0.358161
+0.1	-0.2	-0.2	10	0.5	0.5	0	15	FALSE	0.734522	10.1441	2.13586	0.348036
+0.1	-0.2	-0.2	10	0.5	0.5	15	15	FALSE	0.734522	13.29	2.13586	0.348036
+[12:03:53][output]$ sort -k13gr dotaligner4tuning.concat_sps_time_sci_mcc | head
+0.1	-0.1	0	0	0.25	0	15	15	FALSE	0.804766	13.9298	2.0607	0.403625
+0.1	-0.1	0	0	0.5	0	15	15	FALSE	0.804766	13.8895	2.0607	0.403625
+0.5	-0.2	-0.1	5	0.25	0	15	15	FALSE	0.774233	14.4887	2.01892	0.39075
+0.3	-0.2	0	5	0.25	0.5	FALSE	15	TRUE	0.786245	10.4512	1.94897	0.387875
+0.3	-0.2	0	5	0.25	0.5	0	15	FALSE	0.786245	10.4231	2.00512	0.387232
+0.3	-0.2	0	0	0.25	0.5	FALSE	15	TRUE	0.784517	10.3672	1.94614	0.387196
+0.3	-0.2	0	0	0.5	0.5	FALSE	15	TRUE	0.784517	10.355	1.94614	0.387196
+0.3	-0.2	0	5	0.25	0.5	15	15	FALSE	0.786116	14.1864	2.01482	0.385321
+0.3	-0.2	0	0	0.25	0.5	15	15	FALSE	0.784388	13.3389	2.00969	0.384571
+0.3	-0.2	0	0	0.5	0.5	15	15	FALSE	0.784388	13.4563	2.00969	0.384571
+awk '$1==0.3 && $2==-0.05 && $3==-0.05 && $4==5 && $5==0.5 && $6==0.5 && $7==0 && $8==15 && $9=="FALSE"' dotaligner4tuning.concat_sps_time_sci_mcc
+0.3	-0.05	-0.05	5	0.5	0.5	0	15	FALSE	0.778986	10.5693	2.01884	0.381446
+awk '$1==0.3 && $2==-0.1 && $3==-0.05 && $4==0 && $5==0.25 && $6==0 && $7==0 && $8==15 && $9=="FALSE"' dotaligner4tuning.concat_sps_time_sci_mcc
+0.3	-0.1	-0.05	0	0.25	0	0	15	FALSE	0.794822	11.093	1.97393	0.324196
+awk '$1==0.3 && $2==-0.1 && $3==-0.05 && $4==0 && $5==0.25 && $6==0.5 && $7==0 && $8==15 && $9=="FALSE"' dotaligner4tuning.concat_sps_time_sci_mcc
+0.3	-0.1	-0.05	0	0.25	0.5	0	15	FALSE	0.787209	10.7377	1.962	0.373232
+
+
+#all m25
+sort -k10gr dotaligner4tuning.concat_sps_time_sci_mcc | head
+0.3	-0.2	0	0	0.25	0	FALSE	25	TRUE	0.695208	16.6172	1.90514	0.279333
+0.3	-0.2	0	0	0.5	0	FALSE	25	TRUE	0.695208	17.0555	1.90514	0.279333
+0.3	-0.2	0	0	0.25	0	0	25	FALSE	0.6887	16.8072	1.91396	0.266762
+0.3	-0.2	0	0	0.5	0	0	25	FALSE	0.6887	16.679	1.91396	0.266762
+0.1	-0.1	0	0	0.25	0	FALSE	25	TRUE	0.681669	16.7562	1.95758	0.33406
+0.1	-0.1	0	0	0.5	0	FALSE	25	TRUE	0.681669	16.661	1.95758	0.33406
+0.1	-0.1	0	0	0.25	0	0	25	FALSE	0.678119	16.9081	1.9528	0.320821
+0.1	-0.1	0	0	0.5	0	0	25	FALSE	0.678119	16.8317	1.9528	0.320821
+0.5	-0.2	-0.05	0	0.25	0	0	25	FALSE	0.674192	17.0034	1.9912	0.234048
+0.5	-0.2	-0.05	0	0.5	0	0	25	FALSE	0.674192	17.2216	1.9912	0.234048
+sort -k12gr dotaligner4tuning.concat_sps_time_sci_mcc | head
+0.5	-0.05	-0.05	5	0.5	0.5	0	25	FALSE	0.650706	16.9988	2.10906	0.163357
+0.5	-0.05	-0.05	10	0.5	0.5	0	25	FALSE	0.65105	17.2286	2.106	0.161286
+0.5	-0.05	-0.05	5	0.25	0.5	0	25	FALSE	0.650891	16.7948	2.10561	0.165
+0.5	-0.05	-0.05	10	0.25	0.5	0	25	FALSE	0.65057	17.0076	2.1053	0.160917
+0.5	-0.05	-0.05	0	0.25	0.5	0	25	FALSE	0.650311	16.6668	2.10413	0.165369
+0.5	-0.05	-0.05	0	0.5	0.5	0	25	FALSE	0.650311	16.5987	2.10413	0.165369
+0.5	-0.05	-0.05	5	0.5	0.5	FALSE	25	TRUE	0.641548	16.7905	2.10299	0.16725
+0.5	-0.05	-0.05	10	0.5	0.5	FALSE	25	TRUE	0.641893	17.1223	2.10081	0.165155
+0.5	-0.05	-0.05	10	0.25	0.5	FALSE	25	TRUE	0.641412	16.7731	2.1001	0.164786
+0.5	-0.05	-0.05	5	0.25	0.5	FALSE	25	TRUE	0.641734	16.6108	2.09956	0.16881
+sort -k13gr dotaligner4tuning.concat_sps_time_sci_mcc | head
+0.5	-0.2	-0.1	5	0.25	0	15	25	FALSE	0.65015	19.6382	1.94201	0.343321
+0.5	-0.2	-0.1	5	0.5	0	15	25	FALSE	0.648529	19.655	1.94469	0.334631
+0.1	-0.1	0	0	0.25	0	FALSE	25	TRUE	0.681669	16.7562	1.95758	0.33406
+0.1	-0.1	0	0	0.5	0	FALSE	25	TRUE	0.681669	16.661	1.95758	0.33406
+0.5	-0.2	-0.1	5	0.25	0	FALSE	25	TRUE	0.656625	16.7573	1.97737	0.328131
+0.5	-0.2	-0.1	5	0.25	0.5	15	25	FALSE	0.648982	19.7784	1.97743	0.325714
+0.5	-0.2	-0.1	5	0.25	0.5	FALSE	25	TRUE	0.642877	16.6462	1.9816	0.325714
+0.5	-0.2	0	10	0.25	0.5	15	25	FALSE	0.660832	19.8507	1.99327	0.325655
+0.5	-0.2	0	10	0.25	0.5	FALSE	25	TRUE	0.662779	16.8482	2.0199	0.325655
+0.5	-0.2	0	10	0.5	0.5	15	25	FALSE	0.651721	20.1835	1.98066	0.325655
+awk '$1==0.3 && $2==-0.05 && $3==-0.05 && $4==5 && $5==0.5 && $6==0.5 && $7==0 && $8==25 && $9=="FALSE"' dotaligner4tuning.concat_sps_time_sci_mcc
+0.3	-0.05	-0.05	5	0.5	0.5	0	25	FALSE	0.64393	16.7533	1.9893	0.322226
+awk '$1==0.3 && $2==-0.1 && $3==-0.05 && $4==0 && $5==0.25 && $6==0 && $7==0 && $8==25 && $9=="FALSE"' dotaligner4tuning.concat_sps_time_sci_mcc
+0.3	-0.1	-0.05	0	0.25	0	0	25	FALSE	0.672392	16.7879	2.00206	0.273214
+awk '$1==0.3 && $2==-0.1 && $3==-0.05 && $4==0 && $5==0.25 && $6==0.5 && $7==0 && $8==25 && $9=="FALSE"' dotaligner4tuning.concat_sps_time_sci_mcc
+0.3	-0.1	-0.05	0	0.25	0.5	0	25	FALSE	0.647037	16.3674	1.95422	0.293214
+
 
 
 #draw some beautiful graphs

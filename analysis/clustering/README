@@ -1,0 +1,49 @@
+#boxplot of runtime
+PROG=nw; for DATA in seed_10_55.new seed_56_95.new; do gunzip -c ${DATA}.${PROG}.csv.gz | awk '{gsub(/,/,"\t");print $6}' > ~/tmp.time.${DATA}.${PROG}; done
+
+library(ggplot2)
+library(scales)
+
+da3_s1<-read.table("tmp.time.seed_10_55.new.dotaligner3",header=F)[,1]
+da3_s5<-read.table("tmp.time.seed_56_95.new.dotaligner3",header=F)[,1]
+fa_s1<-read.table("tmp.time.seed_10_55.new.foldalign",header=F)[,1]
+fa_s5<-read.table("tmp.time.seed_56_95.new.foldalign",header=F)[,1]
+nw_s1<-read.table("tmp.time.seed_10_55.new.nw",header=F)[,1]
+nw_s5<-read.table("tmp.time.seed_56_95.new.nw",header=F)[,1]
+pmc_s1<-read.table("tmp.time.seed_10_55.new.pmcomp",header=F)[,1]
+pmc_s5<-read.table("tmp.time.seed_56_95.new.pmcomp",header=F)[,1]
+loc_s1<-read.table("seed_10_55_new_merged.seconds.txt",header=F)[,1]
+loc_s5<-read.table("seed_56_95_new_merged.seconds.txt",header=F)[,1]
+car_s1<-read.table("seed_10_55_new_carna.seconds.txt",header=F)[,1]
+car_s5<-read.table("seed_56_95_new_carna.seconds.txt",header=F)[,1]
+
+time.df<-data.frame(da3_s1,fa_s1,pmc_s1,nw_s1,loc_s1,car_s1)
+#time.df<-data.frame(sample(da3_s1,11325),sample(fa_s1,11325),sample(pmc_s1,11325),sample(nw_s1,11325),loc_s1,car_s1)
+colnames(time.df)<-c("DotAligner","FOLDALIGN","pmcomp","Needleman-Wunsch","LocARNA","CARNA")
+sdf <- stack(time.df)
+pdf("rnaalign_runtime.seed_10_55.new.pdf", width=8,height=4)
+ggplot(sdf, aes(factor(ind), values)) +  geom_boxplot() + theme_bw() + labs(x = "", y = "Average runtime in log-scale [s]") + scale_y_continuous(trans = log2_trans(), breaks = trans_breaks("log2", function(x) 2^x), labels = trans_format("log2", math_format(2^.x)))
+dev.off()
+
+
+#ROC curve
+pdf("seed_10_55_benchmark_roc.pdf",width=6,height=6)
+par(mar=c(5,5,1,1))
+plot(1-0.841,0.648, type="p", xlab="false positive rate", ylab="true positive rate", cex.axis=1.5, cex.lab=1.5, xlim=c(0,0.4), ylim=c(0,1), pch=1, lwd=1)
+points(1-1, 0.681, pch=4, lwd=1)
+points(1-0.969, 0.540, pch=2, lwd=1)
+points(1-0.979, 0.357, pch=3, lwd=1)
+points(1-0.886, 0.737, pch=5, lwd=1)
+points(1-0.926, 0.546, pch=6, lwd=1)
+legend("bottomright",legend=c("DotAligner","CARNA","LocARNA","pmcomp","FOLDALIGN","Needleman-Wunsch"), pch=c(1,4,2,3,5,6), bty="n", cex=1.5)
+dev.off()
+pdf("seed_56_95_benchmark_roc.pdf",width=6,height=6)
+par(mar=c(5,5,1,1))
+plot(1-1,0.864, type="p", xlab="false positive rate", ylab="true positive rate", cex.axis=1.5, cex.lab=1.5, xlim=c(0,0.7), ylim=c(0,1), pch=1, lwd=1)
+points(1-0.475, 0.941, pch=4, lwd=1)
+points(1-0.805, 0.737, pch=2, lwd=1)
+points(1-1, 0.645, pch=3, lwd=1)
+points(1-0.972, 0.797, pch=5, lwd=1)
+points(1-0.918, 0.902, pch=6, lwd=1)
+legend("bottomright",legend=c("DotAligner","CARNA","LocARNA","pmcomp","FOLDALIGN","Needleman-Wunsch"), pch=c(1,4,2,3,5,6), bty="n", cex=1.5)
+dev.off()

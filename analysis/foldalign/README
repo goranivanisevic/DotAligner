@@ -1,9 +1,9 @@
 HDOTALIGNER=/home/stesee/DotAligner
-PROG=foldalign
-#DATA=seed_10_55.new
-DATA=seed_56_95.new
-#NRSPLIT=120
-NRSPLIT=125
+export PROG=foldalign
+export DATA=seed_10_55.new
+#DATA=seed_56_95.new
+NRSPLIT=120
+#NRSPLIT=125
 
 #get 192 job commands
 ./runFA4Benchmark.sh $DATA > testit.sh
@@ -23,3 +23,37 @@ gunzip -c ${DATA}.${PROG}.csv.gz | awk '{gsub(/,/,"\t");if($1==$2){print $1,$2,$
 #submit job
 qsub -q all.q -N pc4${PROG} job_launch_pvclust.sge
 
+#get members of clusters
+cat ${DATA}.${PROG}.clusters | awk '{if(/^\[\[/){gsub(/\[/,"",$1);gsub(/\]/,"",$1);c=$1}else{if(/\[\s*/){for(i=2;i<=NF;i++){gsub(/"/,"",$i);print c,$i}}}}' > ${DATA}.${PROG}.clusters.list
+#get non-clustered families as FN
+merge.pl <(cut -d" " -f2 ${DATA}.${PROG}.clusters.list | sort | uniq -c) <(ls ${HDOTALIGNER}/analysis/rfam/selected_PIDs/${DATA}/*.fa | awk '{split($1,a,/\//);split(a[length(a)],b,/_/);print b[1]}' | sort | uniq -c ) 2,2 | awk '{print ($1-$3),$2}' > ${DATA}.${PROG}.noclusters.list
+#cmp2lists.pl 4 <(cat ${DATA}.${PROG}.clusters | awk '{if(/^\[\[/){gsub(/\[/,"",$1);gsub(/\]/,"",$1);c=$1}else{if(/\[\s*/){for(i=2;i<=NF;i++){gsub(/"/,"",$i);split($i,a,"_");print substr(a[1], 0, 11)"_"a[2]}}}}') <(grep "^>" snorna.selection_l140 | awk '{sub(">","");print substr($1, 0, 11)"_"$2}') | awk '{split($1,a,"_");print a[2]}' | sort | uniq -c > ${DATA}.${PROG}.noclusters.list
+${HDOTALIGNER}/bin/clusterstatistics.pl ${DATA}.${PROG}.clusters.list ${DATA}.${PROG}.noclusters.list
+
+DATA=seed_10_55.new
+RF01699:	TP = 17	FP = 39	TN = 86	FN = 0	SP = 0.6880	SN = 1.0000
+RF02001:	TP = 20	FP = 36	TN = 86	FN = 0	SP = 0.7049	SN = 1.0000
+RF00015:	TP = 11	FP = 0	TN = 128	FN = 3	SP = 1.0000	SN = 0.7857
+RF00059:	TP = 13	FP = 4	TN = 118	FN = 7	SP = 0.9672	SN = 0.6500
+RF00379:	TP = 8	FP = 0	TN = 130	FN = 4	SP = 1.0000	SN = 0.6667
+RF01794:	TP = 10	FP = 4	TN = 128	FN = 0	SP = 0.9697	SN = 1.0000
+RF01055:	TP = 6	FP = 0	TN = 123	FN = 13	SP = 1.0000	SN = 0.3158
+RF00557:	TP = 4	FP = 0	TN = 122	FN = 16	SP = 1.0000	SN = 0.2000
+RF00162:	TP = 3	FP = 14	TN = 124	FN = 1	SP = 0.8986	SN = 0.7500
+RF00380:	TP = 6	FP = 50	TN = 86	FN = 0	SP = 0.6324	SN = 1.0000
+SP = 0.8861
+SN = 0.7368
+
+DATA=seed_56_95.new
+RF01699:	TP = 7	FP = 0	TN = 147	FN = 0	SP = 1.0000	SN = 1.0000
+RF02001:	TP = 10	FP = 0	TN = 144	FN = 0	SP = 1.0000	SN = 1.0000
+RF00015:	TP = 6	FP = 0	TN = 268	FN = 34	SP = 1.0000	SN = 0.1500
+RF01685:	TP = 20	FP = 17	TN = 117	FN = 0	SP = 0.8731	SN = 1.0000
+RF00379:	TP = 6	FP = 0	TN = 134	FN = 14	SP = 1.0000	SN = 0.3000
+RF01055:	TP = 14	FP = 0	TN = 140	FN = 0	SP = 1.0000	SN = 1.0000
+RF00557:	TP = 2	FP = 0	TN = 151	FN = 1	SP = 1.0000	SN = 0.6667
+RF00162:	TP = 17	FP = 20	TN = 114	FN = 3	SP = 0.8507	SN = 0.8500
+RF00380:	TP = 20	FP = 1	TN = 133	FN = 0	SP = 0.9925	SN = 1.0000
+RF00013:	TP = 20	FP = 0	TN = 134	FN = 0	SP = 1.0000	SN = 1.0000
+SP = 0.9716
+SN = 0.7967

@@ -1,0 +1,32 @@
+HDOTALIGNER=/home/stesee/DotAligner
+export PROG=dotaligner3
+export DATA=DNMT1
+NRSPLIT=122
+
+#generate pp files
+split -l 2 -a3 -d ../../DNMT1-bound_merged_extended_noLowerCase.fasta DNMT1bound
+for i in `ls ${HDOTALIGNER}/example/ripseq/dotaligner3/data`; do sed 's/(//' ${HDOTALIGNER}/example/ripseq/dotaligner3/data/${i} | sed 's/)//' > tmp.fa; ${HDOTALIGNER}/bin/getRNAfoldPP.pl tmp.fa > ${HDOTALIGNER}/example/ripseq/dotaligner3/data/${i}.pp; done
+#get 192 job commands
+./runDA4DNMT1.sh $DATA > testit.sh
+split -l $NRSPLIT -a 3 -d testit.sh  ${HDOTALIGNER}/example/ripseq/dotaligner3/jobs/${PROG}4${DATA}_
+rm testit.sh
+for i in `perl -e '{for(my $i=190; $i>=0; $i--){printf("%03i ",$i)}}'`; do cat jobs/${PROG}4${DATA}_${i} | awk -v i=$i -v data=$DATA -v prog=$PROG '{gsub(data"."prog,data"."prog""i); print $0}' > tmp.out; mv tmp.out jobs/${PROG}4${DATA}_${i}; j=`echo "" | awk -v i=$i '{print i+1}'`; mv jobs/${PROG}4${DATA}_${i} jobs/${PROG}4${DATA}_${j}; done
+chmod 744 jobs/${PROG}4${DATA}*
+#submit jobs
+qsub -q all.q -N da4ben -t 1-192 job_launch_${PROG}.sge
+#merge results
+for i in `perl -e '{for(my $i=0; $i<=191; $i++){printf("%03i ",$i)}}'`; do cat ${DATA}.${PROG}${i} >> ${DATA}.${PROG}; done
+gunzip -c ${DATA}.${PROG}.gz | awk 'BEGIN{OFS=","}{ if(NR%9==1){ split($1,a,"/");split($2,b,"/");sub(/.pp/,"",a[length(a)]);sub(/.pp/,"",b[length(a)]);s1=a[length(a)];s2=b[length(b)] }; if(NR%9==3){ sub(/,$/,"",$3);sc=$3 }; if(NR%9==4){ a1=$1 }; if(NR%9==5){ a2=$1 }; if(NR%9==8){ split($2,c,"m");sub("s","",c[2]);time=60*c[1]+c[2]; print s1,s2,a1,a2,sc,time }; }' | gzip > ${DATA}.${PROG}.csv.gz
+
+#pvclust
+gunzip -c ${DATA}.${PROG}.csv.gz | awk '{gsub(/,/,"\t");if($1==$2){print $1,$2,$5}else{print $1,$2,$5"\n"$2,$1,$5}}' | cut -d" " -f1 | sort -u | awk '{split($1,a,"_");print a[1]}' > ${DATA}.identifier
+LEN=`cat ${DATA}.identifier | wc -l`
+gunzip -c ${DATA}.${PROG}.csv.gz | awk '{gsub(/,/,"\t");if($1==$2){print $1,$2,$5}else{print $1,$2,$5"\n"$2,$1,$5}}' | sort -k1,2 | awk -v len=$LEN 'BEGIN{ORS=""}{print $3," "; if(NR%len == 0){print "\n"}}' > ${DATA}.${PROG}.2x2
+#submit job
+qsub -q all.q -N pc4${PROG} job_launch_pvclust.sge
+
+#get members of clusters
+cat ${DATA}.${PROG}.clusters | awk '{if(/^\[\[/){gsub(/\[/,"",$1);gsub(/\]/,"",$1);c=$1}else{if(/\[\s*/){for(i=2;i<=NF;i++){gsub(/"/,"",$i);print c,$i}}}}' > ${DATA}.${PROG}.clusters.list
+#get non-clustered families as FN
+merge.pl <(cut -d" " -f2 ${DATA}.${PROG}.clusters.list | sort | uniq -c) <(ls ${HDOTALIGNER}/analysis/rfam/selected_PIDs/${DATA}/*.fa | awk '{split($1,a,/\//);split(a[length(a)],b,/_/);print b[1]}' | sort | uniq -c ) 2,2 | awk '{print ($1-$3),$2}' > ${DATA}.${PROG}.noclusters.list
+${HDOTALIGNER}/bin/clusterstatistics.pl ${DATA}.${PROG}.clusters.list ${DATA}.${PROG}.noclusters.list
