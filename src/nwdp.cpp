@@ -59,6 +59,7 @@ int readinput ( istream & is, string & name, string & seq, vector<float> & prob 
 		else
 			if( i == 0 ) {
 				seq = line;
+				replace( seq.begin(), seq.end(), 'T', 'U' );
 				lnr = line.length();
 				prob.reserve( lnr * lnr );
 			}
@@ -137,11 +138,10 @@ void reducematrix(vector<float> & prob, int len, int precision)
    \param[rel_idx_2]  index of reference nucleotide of S_b in vector idx_2_aln
    \param[idx_2_aln]  indices of nucleotides in the subsequence of S_b that is considered for alignment ( SS_b )
    \param[len_2] length of considered subsequence SS_b
-   \param[prm]  boolean if dynamic programming matrices are printed
 
    \returns  Similarity score ( 0 .. 1 )
 */
-float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int rel_idx_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int rel_idx_2, int * idx_2_aln, int len_2, float * subprobDbl_1, float * subprobSgl_1, float * subprobDbl_2, float * subprobSgl_2, bool freeEndGaps, bool prm, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP )
+float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int rel_idx_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int rel_idx_2, int * idx_2_aln, int len_2, float * subprobDbl_1, float * subprobSgl_1, float * subprobDbl_2, float * subprobSgl_2, bool freeEndGaps, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP )
 {
     int idx_1 = idx_1_aln[ rel_idx_1 ];
     int idx_2 = idx_2_aln[ rel_idx_2 ];
@@ -186,6 +186,7 @@ float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, 
     int minlen = ( len_2 > len_1 ) ? len_1 : len_2;
    	//cerr << idx_1 << " " << idx_2 << " " << sigma << " " << tau << " " << minlen << " " << ( tau / minlen ) << " " << kappa * sigma + ( 1 - kappa ) * tau / ( minlen - 1 ) << endl;
    	return kappa * sigma + ( 1 - kappa ) * tau / ( minlen - 1 );
+    //return tau / ( minlen - 1 );
 }
 
 
@@ -209,9 +210,9 @@ int nwdp_seed( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_
 		for( int l = 0; l < maxlen - seedlen - k; l++ )
 		{
 			if( len_2 > len_1 )
-				sim[ l ][ k ] = seedsim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, k, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, l, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, 0, F, Q, P, trF, trQ, trP );
+				sim[ l ][ k ] = seedsim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, k, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, l, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, F, Q, P, trF, trQ, trP );
 			else
-				sim[ k ][ l ] = seedsim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, l, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, k, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, 0, F, Q, P, trF, trQ, trP );
+				sim[ k ][ l ] = seedsim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, l, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, k, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, F, Q, P, trF, trQ, trP );
 		}
 
 	/* run simalign_affinegaps */
@@ -219,9 +220,9 @@ int nwdp_seed( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_
 	int *tmp_idx_max_aln = new int[maxlen];
 	int len_seed_pair, len_seed_aln;
 	if( len_2 > len_1 )
-		simalign_affinegaps( seedsim, seedlen, maxlen, tmp_idx_seed_aln, tmp_idx_max_aln, len_seed_pair, len_seed_aln, 0, 0, F, Q, P, trF, trQ, trP );
+		simalign_affinegaps( seedsim, seedlen, maxlen, tmp_idx_seed_aln, tmp_idx_max_aln, len_seed_pair, len_seed_aln, 0, F, Q, P, trF, trQ, trP );
 	else
-		simalign_affinegaps( seedsim, maxlen, seedlen, tmp_idx_max_aln, tmp_idx_seed_aln, len_seed_pair, len_seed_aln, 0, 0, F, Q, P, trF, trQ, trP );
+		simalign_affinegaps( seedsim, maxlen, seedlen, tmp_idx_max_aln, tmp_idx_seed_aln, len_seed_pair, len_seed_aln, 0, F, Q, P, trF, trQ, trP );
 	int offset = tmp_idx_max_aln[ 0 ];
 
     /* free memory */
@@ -269,7 +270,7 @@ int nwseq_seed( string seq_1, string seq_2, float ** F, char ** trF )
 	        	case 'A':  x = 0 ;  break ;
 	            case 'C':  x = 1 ;  break ;
 	            case 'G':  x = 2 ;  break ;
-	            case 'T':  x = 3 ;  break ;
+	            case 'U':  x = 3 ;  break ;
 	        }
 
 	        nuc = seq_2[ j-1 ] ;
@@ -279,7 +280,7 @@ int nwseq_seed( string seq_1, string seq_2, float ** F, char ** trF )
 	        	case 'A':  y = 0 ;  break ;
 	            case 'C':  y = 1 ;  break ;
 	            case 'G':  y = 2 ;  break ;
-	            case 'T':  y = 3 ;  break;
+	            case 'U':  y = 3 ;  break;
 	        }
 
 	        fU = F[ j-1 ][ i ] + d ;
@@ -330,7 +331,7 @@ int nwseq_seed( string seq_1, string seq_2, float ** F, char ** trF )
 		for( int k = 0; k <= L2; k++ ) tempidx_2[ k ] = (float) k;
 		cout << "F:" << endl;
 		print_matrixdp( F, tempidx_1, L1, tempidx_2, L2);
-		print_matrixdp( trF, tempidx_1, L1, tempidx_2, L2);*/
+		print_matrixdp( trF, tempidx_1, L1, tempidx_2, L2);
 	#endif
 	cerr << "SEQALN: Seq_1 ( " << i << ", " << li << " ); Seq_2 ( " << j << ", " << lj << " )" << endl;
 
@@ -558,7 +559,7 @@ void print_matrixdp( T ** F, float * prob_1, int L1, float * prob_2, int L2 )
 }
 
 
-float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * idx_2_aln, int & Lpair, int & Laln, bool global, bool prm, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP )
+float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * idx_2_aln, int & Lpair, int & Laln, bool global, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP )
 {
     int i = 0, j = 0;
     float sim;
@@ -691,7 +692,7 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
     reverse( idx_1_aln, Lpair );
     reverse( idx_2_aln, Lpair );
 
-    if( prm ) {
+	#if DEBUG
         cout << "\nDynamic programming matrix: " << endl;
         float* tempidx_1 = new float[L1+1];
         float* tempidx_2 = new float[L2+1];
@@ -710,7 +711,8 @@ float simalign_affinegaps( float ** Z, int L1, int L2, int * idx_1_aln, int * id
         free(tempidx_2);
         for(int i=0; i<Lpair; i++){cerr << idx_1_aln[i] << " ";} cerr << endl;
         for(int i=0; i<Lpair; i++){cerr << idx_2_aln[i] << " ";} cerr << endl;
-    }
+	#endif
+
 	cerr << "STRUCTALN: Seq_1 ( " << i << ", " << li << " ); Seq_2 ( " << j << ", " << lj << " )" << endl;
 
  	return sim;
@@ -796,6 +798,7 @@ void getlogoddsDblNeighborhood( vector<float> & probDbl, string seq, int len, fl
     	offset = i * len;
     	for( int j = 0; j < len; j++ )
     		tmpprob[ offset + j ] = max( 0, log( probDbl[ offset + j ] / pnull ) / log( 1 / pnull ) );
+    		//tmpprob[ offset + j ] = probDbl[ offset + j ];
     }
 
     for( int i = 0; i < len; i++ )

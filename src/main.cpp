@@ -49,7 +49,6 @@ int main( int argc, char ** argv )
         string  filename1, filename2;
 
         /* boolean flags */
-        static int setprintmatrix_flag = 0;
         static int setglobal2_flag = 0;
         static int setseqaln_flag = 0;
         static int help_flag = 0;
@@ -59,7 +58,6 @@ int main( int argc, char ** argv )
     	{
     		static struct option long_options[] =
     		{
-    			{"printdp", no_argument, &setprintmatrix_flag, 1},	// Print matrices
     			{"global2", no_argument, &setglobal2_flag, 1},  // global alignment in step 2 (default is local alignment in step 2)
     			{"dotplot", required_argument, 0, 'd'},			// input dot plots
     			{"kappa", required_argument, 0, 'k'},			// weight of sequence similarity
@@ -231,36 +229,35 @@ int main( int argc, char ** argv )
 			for( k = 0; k<len_1; k++)
 				if( offset + *min + maxshift >= *max && offset + *min - maxshift <= *max )
 					if( sim[ l ][ k ] == INFINITE )
-						sim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, k, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, l, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, setprintmatrix_flag, F, Q, P, trF, trQ, trP );
+						sim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, k, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, l, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, F, Q, P, trF, trQ, trP );
 
-		if( setprintmatrix_flag )
-		{
+		#if DEBUG
 			cout << "Similarity matrix: " << endl;
 			for( int j=0; j<len_2; j++) {
 				for( int i=0; i<len_1; i++)
 					cout << sim[ j ][ i ] << "\t";
 				cout << endl;
 			}
-		}
+		#endif
 
 		/* STEP 2: find best local (or global) path through similarity matrix */
-		simalign_affinegaps( sim, len_1, len_2, idx_1_aln, idx_2_aln, len_pair, len_aln, setglobal2_flag, setprintmatrix_flag, F, Q, P, trF, trQ, trP );
+		simalign_affinegaps( sim, len_1, len_2, idx_1_aln, idx_2_aln, len_pair, len_aln, setglobal2_flag, F, Q, P, trF, trQ, trP );
 
 		#if DEBUG
 			cout << "\tGaps_1 = " << len_1-len_pair << "\tGaps_2 = " << len_2-len_pair << endl;
 			for( int i=0; i<len_pair; i++ ) cout << idx_1_aln[ i ] << "\t"; cout << endl;
 			for( int j=0; j<len_pair; j++ ) cout << idx_2_aln[ j ] << "\t"; cout << endl;
 			cout << "probDbl_1: " << len_pair << endl;
-			for( int i=0; i<len_pair; i++) for( int j=0; j<len_pair; j++ ) cout << probDbl_1[ idx_1_aln[ i ]*len_1 + idx_1_aln[ j ] ] << "\t"; cout << endl;
+			for( int i=0; i<len_pair; i++) for( int j=0; j<len_pair; j++ ) cout << kappa * probSgl_1[ idx_1_aln[ j ] ] + ( 1 - kappa ) * probDbl_1[ idx_1_aln[ i ]*len_1 + idx_1_aln[ j ] ] << "\t"; cout << endl;
 			cout << "probDbl_2: " << len_pair << endl;
-			for( int i=0; i<len_pair; i++) for( int j=0; j<len_pair; j++ ) cout << probDbl_2[ idx_2_aln[ i ]*len_2 + idx_2_aln[ j ] ] << "\t"; cout << endl;
+			for( int i=0; i<len_pair; i++) for( int j=0; j<len_pair; j++ ) cout << kappa * probSgl_2[ idx_2_aln[ j ] ] + ( 1 - kappa ) * probDbl_2[ idx_2_aln[ i ]*len_2 + idx_2_aln[ j ] ] << "\t"; cout << endl;
 		#endif
 
 		/* calculate final similarity */
 		float similarity = 0.;
 		int open = 0, extended = 0;
 		for( int i=0; i<len_pair; i++ )
-			similarity += nwdp( seq_1, probDbl_1, probSgl_1, i, idx_1_aln, len_pair, seq_2, probDbl_2, probSgl_2, i, idx_2_aln, len_pair, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 0, setprintmatrix_flag, F, Q, P, trF, trQ, trP );
+			similarity += nwdp( seq_1, probDbl_1, probSgl_1, i, idx_1_aln, len_pair, seq_2, probDbl_2, probSgl_2, i, idx_2_aln, len_pair, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 0, F, Q, P, trF, trQ, trP );
 		affinegapcosts(idx_1_aln, idx_2_aln, len_pair, open, extended);
 		//cout << similarity << " " << alpha*open << " " << beta*extended << " " << " " << len_pair << " " << len_aln << " " << extended << endl;
 		similarity = ( len_pair ) ? ( similarity + alpha * open + beta * extended ) / len_aln + 0.5 : 0;
@@ -272,10 +269,6 @@ int main( int argc, char ** argv )
 		cout << ", Length_2 = " << len_2 << ", Unaligned_2 = " << len_2-len_pair << endl;
 
 		/* print sequences aligned by dot plot alignment */
-		#if DEBUG
-			for( int i=0; i<len_pair; i++ ) cout << idx_1_aln[ i ] << ","; cout << endl;
-			for( int j=0; j<len_pair; j++ ) cout << idx_2_aln[ j ] << ","; cout << endl;
-		#endif
 		printalign(seq_1, idx_1_aln, seq_2, idx_2_aln, len_pair);
 
 		/* free memory */
