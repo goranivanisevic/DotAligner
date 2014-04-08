@@ -25,7 +25,7 @@ system "RNAfold -p2 < $fasta > /dev/null";
 open(file_local, $pwd . "/" . $name . "_dp.ps");
 my $start = 0;
 while( <file_local> ) {
-  if( /%start of base pair probability data/ ) {
+  if( /^%data starts here/ || /^%start of base pair probability data/ ) {
     $start = 1;
     next;
   }
@@ -40,7 +40,7 @@ while( <file_local> ) {
   $p[ $l[0]-1 ][ $l[1]-1 ] = $p[ $l[1]-1 ][ $l[0]-1 ] = $l[2]*$l[2] if $l[3]=~/ubox/;
 }
 close file_local;
-system join( '', "rm -f ", $pwd , "/", $name, "_dp.ps ", $pwd, "/", $name, "_ss.ps" );
+system join( '', "rm -f ", $pwd , "/", $name, "_dp.ps ", $pwd, "/", $name, "_ss.ps ", $pwd, "/", $name, "_dp2.ps" );
 
 # write output
 print ">" . $name . "\n" . $seq . "\n";
@@ -56,14 +56,17 @@ for( my $i=0; $i<$len; $i++ ) {
 sub get_alignment
 {
 	my ($fasta) = @_;
-	my $name;
+	my ($name, @aname, $len);
 	my $seq = "";
 
 	open IN, $fasta || die("Can not open the file!\n");
 	$_ = <IN>;
 	chomp($_);
 	s/^>//;
-	$name = (split " ")[0];  
+	$name = (split " ")[0];
+	@aname=(split "", $name); 
+        $len = ( @aname < 12 ) ? @aname : 12;
+        $name = ""; foreach my $i ( 0 .. $len-1 ) { $name .= $aname[$i]; } 
 	while( <IN> ) {
 		chomp($_);
 		$_ =~ tr/\.gcautT/-GCAUUU/;
@@ -71,7 +74,7 @@ sub get_alignment
 		$seq .= $_;
 	}
 	close IN;
-	my $len = length($seq);
+	$len = length($seq);
 
 	return $name, $seq, $len;	
 }
