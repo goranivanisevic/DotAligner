@@ -1,0 +1,85 @@
+#!/bin/bash
+##################################################################################
+##### (1) convert scores from pairwise file descriptors into a pairwise matrix
+##### (2) perform hierarchical clustering and bootstrapping
+##################################################################################
+##  SGE submission options  
+#$ -cwd                       	# Change to current working directory 
+#$ -V                         	# Export environment variables into script 
+#$ -S /bin/bash					# Enforce bash (don't touch!!!!)
+#$ -j y
+
+# Input ARGS
+# $1 = /path/to/output
+# $2 = algorithm
+
+if [[ ! -d ${1}/${2} ]]; then mkdir ${1}/${2} ; done
+
+# merge and tidy up
+if [[ ! -e ${1}/${2}/srtd.out.gz ]]; then
+	cat ${1}/array_*.${2} | sort -k 3,3n -k 4,4n > ${1}/${2}/srtd.out
+	rm ${1}/array_*.${2}
+	gzip ${1}/DotAligner.o
+else
+	gunzip ${1}/${2}/srtd.out.gz
+fi
+
+#################################################################
+# Build matrix from pairwise scores
+num_cols=$(( `cut -d " " -f 3 ${1}/${2}/srtd.out | grep -w 1 | wc -l` ))
+awk '{gsub(/,/,"\t");if($3==$4){print $3,$4,$5}else{print $3,$4,$5"\n"$4,$3,$5}}' ${1}/${2}/srtd.out \
+	| sort -k 1,1n -k 2,2n | awk -v len=$num_cols 'BEGIN{ORS="	"}{print $3," "; if(NR%len == 0){print "\n"}}' \
+	> /tmp/${2}_srtd.matrix
+
+#################################################################
+# Get identifiers (fasta headers)
+cut -d " " -f 1 ${1}/${2}/srtd.out | uniq | while read line 
+do
+	echo ${line##*/} | sed 's/_dp.ps//'
+done > /tmp/${2}_srtd.ids
+
+#################################################################
+# Clean up and transfer
+gzip $1/${2}_srtd.out
+mv /tmp/${2}_srtd.ids ${1}/${2}/srtd.ids
+mv /tmp/${2}_srtd.matrix ${1}/${2}/srtd.matrix
+
+#################################################################
+# Perform hierarchical clustering, bootstrapping, and extract clusters
+#Usage: /path/to/Rscript [--options] [-e expr] file [args]
+R_BIN=$( which Rscript ) 
+if [[ -z $R_BINS ]] 
+then	echo -e "[ ERROR ] Rscript binary not found! Have you loaded the module/PATH properly? "
+		exit 1 
+fi
+$R_BIN ${PATH_TO_SGE_SCRIPTS}/clusterStrap.R ${1}/${2}/srtd.matrix ${1}/${2}/srtd.ids ${PROCS}
+
+#################################################################
+#get FASTA file for each cluster
+if [[ ! -e ${1}/${2}/srtd_a99_clusters ]]; then 
+	echo -e "\e[91m[ ERROR ]\e[0m No clustering output file detected: "${1}"/"${2}"/srtd_a99_clusters"
+	exit 1 
+fi
+if [[ ! -d ${1}/${2}/clusters ]]; then mkdir ${1}/${2}/clusters; fi
+CLNR=0
+awk '/"/' ${1}/${2}/srtd_a99_clusters | while read LINE; do
+  CLNR=$((CLNR+1));
+  echo 	$LINE | \
+  		awk '/"/{clnr++;for(i=2;i<=NF;i++){gsub(/"/,"");print $i}}' | \
+  		xargs -I {} grep -m 1 -A 1 "^>{}$" ${INPUT_FASTA} >> ${1}/${2}/clusters/cluster.${CLNR}.fa
+  mkdir ${1}/${2}/clusters/cluster.${CLNR};
+  #################################################################
+  #get subtree for cluster
+  FID=`awk '/^>/{sub(">","");print $1}' clusters/cluster.${CLNR}.fa | \
+  		xargs -I {} grep -o -b {} DNMT1.dotaligner3.clusters.newick | \
+  		awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | head -1`
+  LID=`awk '/^>/{sub(">","");print $1}' clusters/cluster.${CLNR}.fa | \
+  		xargs -I {} grep -o -b {} DNMT1.dotaligner3.clusters.newick | \
+  		awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | tail -1`
+  #perl -sane '/([\d+\.,\(]*$fid.*$lid[:\d+\.,\)]+)/; $tree=$1; $tree=~s/:*\d+\.\d+,//; \
+  #		$tree=~s/,$/\;/; print $tree."\n"' -- -fid=$FID -lid=$LID DNMT1.dotaligner3.clusters.newick
+  nw_clade DNMT1.dotaligner3.clusters.newick $FID $LID > clusters/cluster.${CLNR}/DNMT1.dotaligner3.clusters.${CLNR}.newick
+done
+
+
+

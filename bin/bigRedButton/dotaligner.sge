@@ -1,0 +1,20 @@
+#!/bin/bash
+################################# SGE submission options
+#$ -cwd                       	# Change to current working directory
+#$ -V                         	# Export environment variables into script
+#$ -S /bin/bash					# Enforce bash (don't touch!!!!)
+#$ -j y
+
+# this loads the appropriate environmental variables
+module load marsmi/dotaligner/27032014
+PAIRWISE_LIST=$1
+SUBSET=$(ls ${PAIRWISE_LIST%/*}/array_??? | head -n ${SGE_TASK_ID} | tail -n 1) 
+
+cat $SUBSET | while read line ; do
+    echo -n $line" " >> $SUBSET.dotaligner
+    FILE_1=$(echo $line | awk '{print $1}')
+    FILE_2=$(echo $line | awk '{print $2}')
+    DotAligner -d ${FILE_1%ps}pp -d ${FILE_2%ps}pp -k 0.3 -a -0.05 -b -0.05 -r 5 -t 0.5 -l 0.5 -s 0 -m 15 --seqaln \
+    		| grep Similarity | awk '{print $3}' | sed 's/,//'  >> $SUBSET.dotaligner
+done
+
