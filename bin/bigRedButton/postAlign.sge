@@ -48,9 +48,9 @@ mv /tmp/${2}_srtd.matrix ${1}/${2}/srtd.matrix
 # Perform hierarchical clustering, bootstrapping, and extract clusters
 #Usage: /path/to/Rscript [--options] [-e expr] file [args]
 R_BIN=$( which Rscript ) 
-if [[ -z $R_BINS ]] 
-then	echo -e "[ ERROR ] Rscript binary not found! Have you loaded the module/PATH properly? "
-		exit 1 
+if [[ -z $R_BINS ]]; then
+	echo -e "\e[91m[ ERROR ]\e[0m Rscript binary not found! Have you loaded the module/PATH properly? "
+	exit 1 
 fi
 $R_BIN ${PATH_TO_SGE_SCRIPTS}/clusterStrap.R ${1}/${2}/srtd.matrix ${1}/${2}/srtd.ids ${PROCS}
 
@@ -67,18 +67,19 @@ awk '/"/' ${1}/${2}/srtd_a99_clusters | while read LINE; do
   echo 	$LINE | \
   		awk '/"/{clnr++;for(i=2;i<=NF;i++){gsub(/"/,"");print $i}}' | \
   		xargs -I {} grep -m 1 -A 1 "^>{}$" ${INPUT_FASTA} >> ${1}/${2}/clusters/cluster.${CLNR}.fa
-  mkdir ${1}/${2}/clusters/cluster.${CLNR};
+  mkdir ${1}/${2}/clusters/cluster.${CLNR}
+
   #################################################################
   #get subtree for cluster
-  FID=`awk '/^>/{sub(">","");print $1}' clusters/cluster.${CLNR}.fa | \
-  		xargs -I {} grep -o -b {} DNMT1.dotaligner3.clusters.newick | \
+  FID=`awk '/^>/{sub(">","");print $1}' ${1}/${2}/clusters/cluster.${CLNR}.fa | \
+  		xargs -I {} grep -o -b {} ${1}/${2}/srtd.newick | \
   		awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | head -1`
-  LID=`awk '/^>/{sub(">","");print $1}' clusters/cluster.${CLNR}.fa | \
+  LID=`awk '/^>/{sub(">","");print $1}' ${1}/${2}/clusters/cluster.${CLNR}.fa | \
   		xargs -I {} grep -o -b {} DNMT1.dotaligner3.clusters.newick | \
   		awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | tail -1`
   #perl -sane '/([\d+\.,\(]*$fid.*$lid[:\d+\.,\)]+)/; $tree=$1; $tree=~s/:*\d+\.\d+,//; \
   #		$tree=~s/,$/\;/; print $tree."\n"' -- -fid=$FID -lid=$LID DNMT1.dotaligner3.clusters.newick
-  nw_clade DNMT1.dotaligner3.clusters.newick $FID $LID > clusters/cluster.${CLNR}/DNMT1.dotaligner3.clusters.${CLNR}.newick
+  nw_clade ${1}/${2}/srtd.newick $FID $LID > ${1}/${2}/clusters/cluster.${CLNR}/cluster.${CLNR}.newick
 done
 
 
