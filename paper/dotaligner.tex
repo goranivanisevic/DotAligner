@@ -41,11 +41,12 @@
 
 \begin{document}
 
-\title{Clustering of common structured RNA domains by aligning basepair probabilities}
+\title{De-novo identification of homologous RNA secondary structure domains using base-pairing probabilities}
 
-\author{\authorname{Stefan E Seemann\sup{1,2}, Martin A Smith\sup{1}}
-\affiliation{\sup{1}Garvan Instistute of Medical Research, 384 Victoria Street, Sydney, NSW, Australia}
+\author{\authorname{Stefan E Seemann\sup{1,2}, Martin A Smith\sup{1,3}, John S Mattick\sup{1,3}}
+\affiliation{\sup{1}Garvan Institute of Medical Research, 384 Victoria Street, Sydney 2010, Australia}
 \affiliation{\sup{2}University of Copenhagen, Groennegaardsvej 3, Frederiksberg, Denmark}
+\affiliation{\sup{3}St Vincent’s Clinical School, UNSW, Sydney 2010, Australia}
 \email{seemann@rth.dk}
 }
 
@@ -54,22 +55,24 @@
 
 %at least 70 and at most 200 words
 
-\abstract{A strong functional feature of many RNA molecules is their RNA
-secondary structure. Many short RNAs have characteristic global structures,
-such as the two sequential stem-loop structures of HACA snoRNAs. Long noncoding
-RNAs (lncRNAs) have important local structured RNA domains that are, for
-instance, recognized by RNA binding proteins. The discovery of functional RNA
-domains demands fast and accurate clustering approaches that are based on the
-structure landscape of RNA sequences. The gold standard of comparative RNA
-analysis, namely Sankoff-style simultaneous alignment and folding, is, however,
-not applicable. Here, we present a novel algorithm for RNA structure alignments
-that we named \dotaligner. The presented method optimizes the alignment of two
-RNA sequences with respect to all possible structures simultaneously, which
-allows the alignment of similar structured RNA domains of low sequence
-similarity. The generated dissimilarity matrices are used to cluster RNA
-sequences in common structured RNA domains. The method was successfully tested
-on a selected set of HACA-box snoRNAs. It can contribute to the detection of
-functional RNA domains through its speed and high specificity.}
+\abstract{Non-protein coding RNAs (ncRNAs) are the prevalent transcriptional 
+product of higher eukaryote genomes. Their varied biological functions are 
+governed by both their sequence composition and their higher-order structural 
+conformation. The uncertainty of secondary structure prediction algorithms 
+for single RNA sequences in conjunction with the limited diversity of well-
+characterised RNA structures have restricted the identification and annotation
+of novel functional ncRNA domains. Here, we present a unified computational 
+methodology for the identification of common RNA secondary structures from 
+a set of sequences, requiring little to no user intervention while being 
+fully customisable. We compare the performance of several state of the 
+art tools for pairwise secondary structure alignment with \dotaligner , a 
+novel algorithm we developed that considers the ensemble of sub-optimal RNA 
+base pairings between two RNA sequences simultaneously. Through hierarchical 
+clustering and bootstrapping analysis, our method identifies statistically 
+significant clusters of homologous, structured RNA domains with no limitations 
+on the sequence composition of the input. We successfully identify known RNA 
+secondary structures mixed in with randomised controls, as well as novel 
+structured domains from various previously published transcriptomic datasets.}
 
 \onecolumn \maketitle \normalsize \vfill
 
@@ -539,7 +542,9 @@ thermodynamic and evolutionary information.
 
 \section*{\uppercase{Acknowledgements}}
 
-\noindent I thank the Carlsberg foundation for my travel grant. Sk\aa l!
+\noindent I thank the Carlsberg foundation for my travel grant. Sk\aa l! \\
+MAS is funded in part by a Cancer Council NSW project grant and 
+
 
 
 \vfill
