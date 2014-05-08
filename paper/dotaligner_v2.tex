@@ -82,9 +82,9 @@ various previously published transcriptomic datasets.}
 \noindent The structure of RNA molecules is an essential functional criteria of
 many non-coding RNAs (ncRNAs), such as the stem-loop of microRNAs and the double
 stem-loop RNA motifs of the HOTAIR long ncRNA \cite{Gupta20393566}. NcRNAs can
-be devided in RNA families of similar inherent functionality, structures, or
+be divided in RNA families of similar inherent functionality, structures, or
 composition. The largest collection of RNA families is the Rfam database with
-2,208 families in its version 11.0 \cite{Burge23125362}. However, high-througput
+2,208 families in its version 11.0 \cite{Burge23125362}. However, high-throughput
 sequencing continuously uncovers novel non-coding RNA transcripts and
 genome-wide RNA structure predictions have revealed hundreds of thousands
 putative conserved RNA secondary structures. We hypothesize that the RNA
@@ -427,7 +427,7 @@ $=$ 0.99), however, at the cost of sensitivity (SN $=$ 0.61), see Figure
 \end{figure*}
 
 
-\subsection{Clustering methodology} 
+\subsection{Benchmarking methodology} 
 
 \noindent The reliability of our pairwise structure alignment algorithm at
 clustering homologous RNA structures was tested on a curated database of RNA
@@ -443,10 +443,10 @@ the following framework:
 \item Calculate the correlation coefficient between $dM_A$ and $dM_R$ using the Mantel correlation statistic (the cross-product between the standardised distances). 
 \end{enumerate}
 
-Benchmarking was performed on both complete RNA structures (global alignment) and randomly selected subsequences (local alignment) for various RFAM families, as described below. \\
-
 
 \subsection{Benchmark data generation} 
+
+Benchmarking was performed on both complete RNA structures (global alignment) and randomly selected subsequences (local alignment) for various RFAM families, as described below. \\
 
 xx RNA families were manually selected from the seed alignments of RFAM 11 (REF). \textit{How should we limit the mean pairwise identity? All structures must be within a given range and perform several independent comparisons, i.e. one per SeqID range? Then compare the individual SeqID ranges to a sample of variable SeqIDs (without selection)?}\\
 
@@ -500,7 +500,57 @@ Global alignment. More emphasis on quantitative clustering, accuracy, and correl
 
 Local alignment, simulating genomic screens. More emphasis on qualitative clustering
 
+\subsection{ A unified RNA structure clustering pipeline }
 
+\noindent We implemented a user-friendly pipeline that automates all steps required 
+for the detection of homologous RNA secondary structure motifs from a set of user-
+provided sequences. The pipeline is implemented in BASH programming language and is 
+designed for execution on a high performance computing server (currently, only SGE 
+is supported). This enables non-specialists to complete such an analysis with 
+minimal bioinformatics knowledge, while facilitating parameter modification and 
+customization for advanced users. 
+
+In summary, the pipeline performs the following tasks on a fasta file input:
+\begin{enumerate}
+\item Generates base-pairing probability matrices for each sequence with RNAfold's parition function algorithm 
+\item Performs all-vs-all pairwise alignment in parallel with DotAligner (and/or CARNA, locarna, ....)
+\item Generate (dis)similarity matrix from pairwise alignment scores 
+\item Perform hierarchical clustering and bootstrap significance testing with \pvclust{} (Suzuki R and Shimodaira H. Bioinformatics 2006).
+\item Extract the sequences and associated guide trees for significant clusters
+\item Render a consensus secondary structure motif using the multiple structure alignment tool mlocarna
+\end{enumerate}
+
+\subsubsection{ On consensus hierarchical clustering }
+We are investigating the practicality and efficiency of a consensus hierarchical clustering approach, 
+where the (dis)similarity matrices of different pairwise structure alignment algorithms are concurrently 
+employed for cluster analysis. \textbf{This is cutting-edge stuff and Luis will report back soon. }
+
+\subsubsection{ On multiple structure alignment and 2D motif rendering }
+Generating a multiple structural alignment at the end of the pipeline is an important but tricky step. 
+Right now, we are using mlocarna for this, which to my knowledge is the only tool that can produce such output
+without too much fuss. However, there is a substantial concern that arises from its use: \dotaligner and mlocarna
+use fundamentally different alignment algorithms. This caveat is somewhat resolved by enforcing mlocarna to use 
+the guide tree produced from the all-vs-all (dis)similarity matrix from \dotaligner . Mlocarna will still align
+the sequences based on their consensus structure, therefore some additional benchmarking may be required. N.B., 
+we can dictate which pairwise aligner (or probabilistic aligner) to be used by mlocarna its execution parameters,
+although mlocarna may ignore this when a guide-tree is provided---thus employing locarna to produce intermediate
+alignments even when only 2 sequences are involved. \textbf{CHECK THIS WITH SEBASTIAN WILL }
+
+Some more specific points to consider: 
+\begin{itemize}
+\item --threads=X seemingly doesn't affect mlocarna performance. Is this only implemented for pairwise comparisons? 
+Generating the intermediary alignments uses one CPU. Perhaps --cpu=X will work? 
+\item RNAPLfold is used for longer input sequences, right? Is this because it overcomes sequence length discrepancies? 
+Should we enfore a size limit on the input sequences (either trim or extend the input to XX nucleotides divergence)?
+\item Try option \texttt{--pw-aligner path/to/DotAligner} and see if it will give more reliable consensus structure
+\item Test whether the speed limitation of iterative refinement (\texttt{ --iterations=XX}) will be compensated by 
+better quality alignments
+\item Will this cause (m)locarna to use the entire dotplots for the alignment? Test the effect of the following 
+parameters \texttt{--probabilistic --consistency-transformation --it-reliable-structure=XX}. 
+\end{itemize} 
+% --plfold-span=${SPAN} --plfold-winsize=${WINSIZE} \
+% --probabilistic --consistency-transformation 
+% --it-reliable-structure=10 
 
 \section{\uppercase{Discussion}}
 
