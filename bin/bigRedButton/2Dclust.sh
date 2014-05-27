@@ -18,7 +18,7 @@ export INPUT_FASTA=$1 	# Input files (see README, if it exists)
 #############################################################
 export PROCS=16												# Cpus for clustering and mlocarna
 export BOOTSTRAPS=10000										# Number of bootstraps
-export ALPHA_STAT=0.95										# Alpha statistic for clustering specificity
+export ALPHA_STAT=0.99										# Alpha statistic for clustering specificity
 
 ### What to run 
 RUN_LOCARNA=

@@ -22,6 +22,7 @@ MLOCARNA_BIN=`which mlocarna`
 # Might be buggy !!! To test
 # --plfold-span=${SPAN} --plfold-winsize=${WINSIZE} \
 # --probabilistic --consistency-transformation 
+# --free-endgaps
 # --it-reliable-structure=10 
 ###  --pw-aligner path/to/binary 
 ###  --pw-aligner-p 
@@ -52,18 +53,18 @@ echo "\e[93m[ NOTE ]\e[0m Running PETfold on cluster ${SGE_TASK_ID}"
 PETFOLD_BIN=`which PETfold`
 export PETFOLDBIN=${PETFOLD_BIN%*PETfold}
 if [[ ! -z PETFOLD_BIN && -e ${1}/${2}/clusters/mlocarna.cluster.${SGE_TASK_ID}/results/result.aln ]]; then 
-  echo "Run PETfold for cluster $i"
+  echo "Run PETfold for cluster ${SGE_TASK_ID}"
   ${PETFOLD_BIN} -f ${1}/${2}/clusters/mlocarna.cluster.${SGE_TASK_ID}/results/result_mlocarna.fa \
     -t ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.newick -r ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.pp --verbose \  
     > ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.out
   
   #draw structure
-  PETFOLD_org=`head -1 ${1}/${2}/clusters/cluster.${i}.mlocarna.fa | sed -e 's/^>//'`
+  PETFOLD_org=`head -1 ${1}/${2}/clusters/mlocarna.cluster.${SGE_TASK_ID}/results/result_mlocarna.fa | sed -e 's/^>//'`
   
   tail -2 ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.out | head -1 | awk '{gsub(/-/,".",$4); print $4}' \ 
     > ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.ss
   
-  ${PATH_TO_SGE_SCRIPTS}/colorRNA.sh ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.ss ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna.fa \
+  ${PATH_TO_SGE_SCRIPTS}/colorRNA.sh ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.ss ${1}/${2}/clusters/mlocarna.cluster.${SGE_TASK_ID}/results/result_mlocarna.fa \
     ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.pp ${1}/${2}/clusters/cluster.${SGE_TASK_ID}/cluster.${SGE_TASK_ID}.mlocarna_petfold "$PETFOLD_org"
 else
   echo -e "\e[91m[ WARNING ]\e[0m Cannot locate PETfold binary or mlocarna output... exiting"

@@ -77,22 +77,16 @@ awk '/"/' ${1}/${2}/srtd_a${ALPHA_STAT}_clusters | while read LINE; do
     rm ${1}/${2}/clusters/cluster.${CLNR}.fa
   fi
   echo	$LINE | awk '/"/{clnr++;for(i=2;i<=NF;i++){gsub(/"/,"");print $i}}' | \
-  			xargs -I {} grep -m 1 -A 1 "^>{}$" ${1%*/}.${INPUT_FASTA##*.} | \
-        sed 's/\:/_/' | sed 's/)//' | sed 's/(/_/' | sed 's/_+/_s/' | sed 's/_-/_r/'>> ${1}/${2}/clusters/cluster.${CLNR}.fa
+  			xargs -I {} grep -m 1 -A 1 "^>{}$" ${1}/formatted_input.fa  >> ${1}/${2}/clusters/cluster.${CLNR}.fa
   
   #################################################################
   #get subtree for cluster
   ### PROBLEM: newick format discards ":" after "chr" in fasta header
   FID=$( awk '/^>/{sub(">","");print $1}' ${1}/${2}/clusters/cluster.${CLNR}.fa | \
-  		sed 's/\:/_/' | sed 's/)//' | sed 's/(/_/' | sed 's/_+/_s/' | sed 's/_-/_r/' | xargs -I {} grep -o -b {} ${1}/${2}/srtd.newick | \
-  		awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | head -1 )
+  		xargs -I {} grep -o -b {} ${1}/${2}/srtd.newick | awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | head -1 )
   LID=$(awk '/^>/{sub(">",""); print $1}' ${1}/${2}/clusters/cluster.${CLNR}.fa | \
-  		sed 's/\:/_/' | sed 's/)//' | sed 's/(/_/' | sed 's/_+/_s/' | sed 's/_-/_r/'| xargs -I {} grep -o -b {} ${1}/${2}/srtd.newick | \
-  		awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | tail -1 )
+  		xargs -I {} grep -o -b {} ${1}/${2}/srtd.newick | awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | tail -1 )
   #perl -sane '/([\d+\.,\(]*$fid.*$lid[:\d+\.,\)]+)/; $tree=$1; $tree=~s/:*\d+\.\d+,//; \
   #		$tree=~s/,$/\;/; print $tree."\n"' -- -fid=$FID -lid=$LID DNMT1.dotaligner3.clusters.newick
   nw_clade ${1}/${2}/srtd.newick $FID $LID > ${1}/${2}/clusters/cluster.${CLNR}.newick
 done
-
-
-
