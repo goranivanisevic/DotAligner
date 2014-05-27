@@ -42,7 +42,6 @@ while( <file_local> ) {
   $p[ $l[0]-1 ][ $l[1]-1 ] = $p[ $l[1]-1 ][ $l[0]-1 ] = $l[2]*$l[2] if $l[3]=~/ubox/;
 }
 close file_local;
-system join( '', "rm -f ", $pwd , "/", $fname, "_dp.ps ", $pwd, "/", $fname, "_ss.ps" );
 
 # write output
 print ">" . $fname . "\n" . $ARGV[0] . "\n";

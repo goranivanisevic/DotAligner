@@ -13,13 +13,13 @@
 # $1 = /path/to/output
 # $2 = algorithm
 
-if [[ ! -d ${1}/${2} ]]; then mkdir ${1}/${2} ; done
+if [[ ! -d ${1}/${2} ]]; then mkdir ${1}/${2} ; fi
 
 # merge and tidy up
 if [[ ! -e ${1}/${2}/srtd.out.gz ]]; then
 	cat ${1}/array_*.${2} | sort -k 3,3n -k 4,4n > ${1}/${2}/srtd.out
-	rm ${1}/array_*.${2}
-	gzip ${1}/DotAligner.o
+#	rm ${1}/array_*.${2}
+	gzip ${1}/DotAligner.log
 else
 	gunzip ${1}/${2}/srtd.out.gz
 fi
@@ -40,7 +40,7 @@ done > /tmp/${2}_srtd.ids
 
 #################################################################
 # Clean up and transfer
-gzip $1/${2}_srtd.out
+gzip ${1}/${2}/srtd.out
 mv /tmp/${2}_srtd.ids ${1}/${2}/srtd.ids
 mv /tmp/${2}_srtd.matrix ${1}/${2}/srtd.matrix
 
@@ -48,38 +48,50 @@ mv /tmp/${2}_srtd.matrix ${1}/${2}/srtd.matrix
 # Perform hierarchical clustering, bootstrapping, and extract clusters
 #Usage: /path/to/Rscript [--options] [-e expr] file [args]
 R_BIN=$( which Rscript ) 
-if [[ -z $R_BINS ]]; then
+if [[ -z $R_BIN ]]; then
 	echo -e "\e[91m[ ERROR ]\e[0m Rscript binary not found! Have you loaded the module/PATH properly? "
 	exit 1 
 fi
-$R_BIN ${PATH_TO_SGE_SCRIPTS}/clusterStrap.R ${1}/${2}/srtd.matrix ${1}/${2}/srtd.ids ${PROCS}
+$R_BIN ${PATH_TO_SGE_SCRIPTS}/clusterStrap.R ${1}/${2}/srtd.matrix ${1}/${2}/srtd.ids ${NSLOTS} ${BOOTSTRAPS} ${ALPHA_STAT}
+
+#################################################################
+# User friendly output verification
+if [[ ! -e ${1}/${2}/srtd_a${ALPHA_STAT}_clusters ]]; then 
+	echo -e "\e[91m[ WARNING ]\e[0m No clusters in output: "${1}"/"${2}"/srtd_a"${ALPHA_STAT}"_clusters"
+  echo -e "            Double check files and parameters, or try using a lower alpha statistic "
+	exit 1 
+fi
+if [[ ! -e ${1}/${2}/srtd.newick ]]; then 
+  echo -e "\e[91m[ ERROR ]\e[0m No clustering output file detected: "${1}"/"${2}"/srtd.newick"
+  exit 1
+fi
 
 #################################################################
 #get FASTA file for each cluster
-if [[ ! -e ${1}/${2}/srtd_a99_clusters ]]; then 
-	echo -e "\e[91m[ ERROR ]\e[0m No clustering output file detected: "${1}"/"${2}"/srtd_a99_clusters"
-	exit 1 
-fi
 if [[ ! -d ${1}/${2}/clusters ]]; then mkdir ${1}/${2}/clusters; fi
 CLNR=0
-awk '/"/' ${1}/${2}/srtd_a99_clusters | while read LINE; do
+awk '/"/' ${1}/${2}/srtd_a${ALPHA_STAT}_clusters | while read LINE; do
   CLNR=$((CLNR+1));
-  echo 	$LINE | \
-  		awk '/"/{clnr++;for(i=2;i<=NF;i++){gsub(/"/,"");print $i}}' | \
-  		xargs -I {} grep -m 1 -A 1 "^>{}$" ${INPUT_FASTA} >> ${1}/${2}/clusters/cluster.${CLNR}.fa
-  mkdir ${1}/${2}/clusters/cluster.${CLNR}
-
+  # erase old file if present
+  if [[ -e ${1}/${2}/clusters/cluster.${CLNR}.fa ]]; then 
+    rm ${1}/${2}/clusters/cluster.${CLNR}.fa
+  fi
+  echo	$LINE | awk '/"/{clnr++;for(i=2;i<=NF;i++){gsub(/"/,"");print $i}}' | \
+  			xargs -I {} grep -m 1 -A 1 "^>{}$" ${1%*/}.${INPUT_FASTA##*.} | \
+        sed 's/\:/_/' | sed 's/)//' | sed 's/(/_/' | sed 's/_+/_s/' | sed 's/_-/_r/'>> ${1}/${2}/clusters/cluster.${CLNR}.fa
+  
   #################################################################
   #get subtree for cluster
-  FID=`awk '/^>/{sub(">","");print $1}' ${1}/${2}/clusters/cluster.${CLNR}.fa | \
-  		xargs -I {} grep -o -b {} ${1}/${2}/srtd.newick | \
-  		awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | head -1`
-  LID=`awk '/^>/{sub(">","");print $1}' ${1}/${2}/clusters/cluster.${CLNR}.fa | \
-  		xargs -I {} grep -o -b {} DNMT1.dotaligner3.clusters.newick | \
-  		awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | tail -1`
+  ### PROBLEM: newick format discards ":" after "chr" in fasta header
+  FID=$( awk '/^>/{sub(">","");print $1}' ${1}/${2}/clusters/cluster.${CLNR}.fa | \
+  		sed 's/\:/_/' | sed 's/)//' | sed 's/(/_/' | sed 's/_+/_s/' | sed 's/_-/_r/' | xargs -I {} grep -o -b {} ${1}/${2}/srtd.newick | \
+  		awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | head -1 )
+  LID=$(awk '/^>/{sub(">",""); print $1}' ${1}/${2}/clusters/cluster.${CLNR}.fa | \
+  		sed 's/\:/_/' | sed 's/)//' | sed 's/(/_/' | sed 's/_+/_s/' | sed 's/_-/_r/'| xargs -I {} grep -o -b {} ${1}/${2}/srtd.newick | \
+  		awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | tail -1 )
   #perl -sane '/([\d+\.,\(]*$fid.*$lid[:\d+\.,\)]+)/; $tree=$1; $tree=~s/:*\d+\.\d+,//; \
   #		$tree=~s/,$/\;/; print $tree."\n"' -- -fid=$FID -lid=$LID DNMT1.dotaligner3.clusters.newick
-  nw_clade ${1}/${2}/srtd.newick $FID $LID > ${1}/${2}/clusters/cluster.${CLNR}/cluster.${CLNR}.newick
+  nw_clade ${1}/${2}/srtd.newick $FID $LID > ${1}/${2}/clusters/cluster.${CLNR}.newick
 done
 
 

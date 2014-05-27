@@ -1,0 +1,93 @@
+#!/bin/bash
+##################################################################################
+##### (1) convert scores from pairwise file descriptors into a pairwise matrix
+##### (2) perform hierarchical clustering and bootstrapping
+##################################################################################
+##  SGE submission options  
+#$ -cwd                         # Change to current working directory 
+#$ -S /bin/bash                 # Enforce bash (don't touch!!!!)
+#$ -j y
+
+# Input ARGS
+# $1 = /path/to/output
+# $2 = algorithm
+
+# RNAplfold parameter
+SPAN=150
+WINSIZE=$((SPAN+50))
+
+echo "\e[93m[ NOTE ]\e[0m Running mLocaRNA on cluster ${SGE_TASK_ID}"
+MLOCARNA_BIN=`which mlocarna`
+# Use this when sequences are > 200nt
+# Might be buggy !!! To test
+# --plfold-span=${SPAN} --plfold-winsize=${WINSIZE} \
+# --probabilistic --consistency-transformation 
+# --it-reliable-structure=10 
+###  --pw-aligner path/to/binary 
+###  --pw-aligner-p 
+###  --pw-aligner-options
+
+if [[ ! -z MLOCARNA_BIN ]]; then 
+  CMD="${MLOCARNA_BIN} --iterations=2 \
+    --threads=${PROCS} --treefile ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.newick \
+    --tgtdir ${1}/${2}/clusters/mlocarna.cluster.${SGE_TASK_ID} \
+    -q ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.fa"
+  echo -e "mlocarna command: " 
+  echo -e $CMD && $CMD
+
+  if [[ ! -e  ${1}/${2}/clusters/mlocarna.cluster.${SGE_TASK_ID}/results/result.aln ]]; then
+    echo -e "\e[91m[ WARNING ]\e[0m mLocaRNA did not complete! exiting... " 
+    exit 1 
+  fi
+
+  ${PATH_TO_SGE_SCRIPTS}/aln2fa.pl ${1}/${2}/clusters/mlocarna.cluster.${SGE_TASK_ID}/results/result.aln \
+    | awk '{gsub(/~/,"-"); print $0}' > ${1}/${2}/clusters/mlocarna.cluster.${SGE_TASK_ID}/results/result_mlocarna.fa
+else
+  echo -e "\e[91m[ WARNING ]\e[0m Cannot locate mLocaRNA binary... exiting"
+  exit 1
+fi 
+
+#run PETfold on each cluster
+echo "\e[93m[ NOTE ]\e[0m Running PETfold on cluster ${SGE_TASK_ID}"
+PETFOLD_BIN=`which PETfold`
+export PETFOLDBIN=${PETFOLD_BIN%*PETfold}
+if [[ ! -z PETFOLD_BIN && -e ${1}/${2}/clusters/mlocarna.cluster.${SGE_TASK_ID}/results/result.aln ]]; then 
+  echo "Run PETfold for cluster $i"
+  ${PETFOLD_BIN} -f ${1}/${2}/clusters/mlocarna.cluster.${SGE_TASK_ID}/results/result_mlocarna.fa \
+    -t ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.newick -r ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.pp --verbose \  
+    > ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.out
+  
+  #draw structure
+  PETFOLD_org=`head -1 ${1}/${2}/clusters/cluster.${i}.mlocarna.fa | sed -e 's/^>//'`
+  
+  tail -2 ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.out | head -1 | awk '{gsub(/-/,".",$4); print $4}' \ 
+    > ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.ss
+  
+  ${PATH_TO_SGE_SCRIPTS}/colorRNA.sh ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.ss ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna.fa \
+    ${1}/${2}/clusters/cluster.${SGE_TASK_ID}.mlocarna_petfold.pp ${1}/${2}/clusters/cluster.${SGE_TASK_ID}/cluster.${SGE_TASK_ID}.mlocarna_petfold "$PETFOLD_org"
+else
+  echo -e "\e[91m[ WARNING ]\e[0m Cannot locate PETfold binary or mlocarna output... exiting"
+  exit 1
+fi 
+
+# #annotation of nearest gene (GENCODE)
+# module load gi/bedtools/2.19.1
+# for (( i=1; i<=$CLNR; i++ )); do
+#   echo "Find nearest genes of RNA domains in cluster $i"
+#   grep "^>" cluster.${CLNR}.fa | perl -ane 'chomp; s/^>//; /(chr.+):(\d+)-(\d+)\(([+-])\)/; print "$1\t".($2-1)."\t$3\t$_\t0\t$4\n"' > cluster.${CLNR}/cluster.${CLNR}.bed  #chrM:12975-13125(+)
+#   cat <(bedtools closest -s -D "a" -iu -a cluster.${CLNR}/cluster.${CLNR}.bed -b /home/stesee/biodata/gencode.v19.annotation.bed.gz) <(bedtools closest -s -D "a" -id -a cluster.${CLNR}/cluster.${CLNR}.bed -b /home/stesee/biodata/gencode.v19.annotation.bed.gz) | sort -u > cluster.${CLNR}/cluster.${CLNR}.gencode.v19.nearest
+# done
+
+# #annotation of GO term enrichment
+# module load gi/R/3.0.0
+# for (( i=1; i<=$CLNR; i++ )); do
+#   cd cluster.${CLNR}
+#   echo "Gene Ontology enrichment analysis for nearest genes of RNA domains in cluster $i"
+#   awk -v nearest=10000 '$13<nearest && $13>-1*nearest{split($10,a,/:/); print a[1]}' cluster.${CLNR}.gencode.v19.nearest | sort -u > cluster.${CLNR}.overlap
+#   Rscript gotermanalysis.R cluster.${CLNR}.ensemblid.overlap cluster.${CLNR}.GOenrichment
+#   cd ..
+# done
+
+
+
+
