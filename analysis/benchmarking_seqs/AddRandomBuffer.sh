@@ -20,15 +20,23 @@ do
 		#  12345----------678
 		SPLIT=${RANDOM}
 		let "SPLIT %= ${BUFFER}"
-		BUFFERED=`grep ">" -A 1 ${1} | grep -v -e "--" | shuffle -d - | grep -v ">" | while read shuffled
+		#echo -e "#SPLIT="$SPLIT
+		BUFFERED=`grep ">" -A 1 ${1} | grep -v -e "--" | shuffle -d - | grep -v ">" | \
+		while read shuffled
 	 	do 
 	 		echo -n $shuffled
 	 	done` 
 		
-		echo -n `echo $BUFFERED | cut -c 1-$SPLIT`
+		echo -n `echo $BUFFERED | cut -c 1-$SPLIT `
 		echo -n $line
 		let "SPLIT += 1"
 	 	echo $BUFFERED | cut -c $SPLIT-$BUFFER
+
+		let "SPLIT -= 1"
+	 	echo -n `echo $BUFFERED | cut -c 1-$SPLIT | sed 's/[AUGC]/-/g'`
+	 	echo -n `grep $line -A 1 ${1} | tail -n 1` 
+		let "SPLIT += 1"
+	 	echo $BUFFERED | cut -c $SPLIT-$BUFFER | sed 's/[AUGC]/-/g'
 	fi
 done
 
