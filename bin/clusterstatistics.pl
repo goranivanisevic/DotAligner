@@ -157,12 +157,14 @@ foreach my $key (keys %h) {
   }
  
   #Specificity SP
-  $sp[ $i ] = $tn[ $i ] / ( $tn[ $i ] + $fp[ $i ] );
+  my $denominator = $tn[ $i ] + $fp[ $i ];
+  $sp[ $i ] = ( $denominator != 0 ) ? $tn[ $i ] / $denominator : 0;
   #avg SP
   $asp += $sp[ $i ]; 
 
   #Sensitivity SN
-  $sn[ $i ] = $tp[ $i ] / ( $tp[ $i ] + $fn[ $i ] );
+  $denominator = $tp[ $i ] + $fn[ $i ]; 
+  $sn[ $i ] = ( $denominator != 0 ) ? $tp[ $i ] / $denominator : 0;
   #avg SN
   $asn += $sn[ $i ];
 

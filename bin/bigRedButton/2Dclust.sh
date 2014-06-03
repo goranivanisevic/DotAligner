@@ -9,56 +9,171 @@
 #########################################
 ## CUSTOM PARAMETERS --- MUST BE DEFINED
 MAX_CPUS=192
-export PATH_TO_SGE_SCRIPTS=${HOME}/apps/bsh/clustering		# scripts used herein
-#############################################################
-##### Input shoulf be a .fasta file, ideally from "bedtools getFasta" output
-##### Please ensure no colons, e.g. ":", are in the fasta header 
-##### as this will interfere with .newick tree format 
-export INPUT_FASTA=$1 	# Input files (see README, if it exists)
-#############################################################
+export PATH_TO_SGE_SCRIPTS=${HOME}/DotAligner/bin/bigRedButton		# scripts used herein
+export GENOME=/share/ClusterShare/biodata/contrib/genomeIndices_garvan/iGenomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa      # fasta file of reference genome (here hg19)
 export PROCS=16												# Cpus for clustering and mlocarna
 export BOOTSTRAPS=10000										# Number of bootstraps
 export ALPHA_STAT=0.99										# Alpha statistic for clustering specificity
+export SPAN=150
 
 ### What to run 
 RUN_LOCARNA=
 RUN_CARNA=
 RUN_DOTALIGNER="1"
 
-### load envars
+#########################################
+# usage
+usage() {
+	echo Program: "2Dclust.sh (pairwise structure alignment and clustering)"
+	echo Author: Stefan Seemann, Martin Smith
+	echo Version: 1.0
+	echo Contact: m.smith@garvan.org.au
+	echo "Usage: 2Dclust.sh -b <file> [OPTIONS]"
+	echo "         or"
+	echo "       2Dclust.sh -f <file> [OPTIONS]"
+	echo "Options:"
+	echo " -b <file>    .. input file of signals (BED format)"	
+	echo "                 -> fasta file is made for you of sequences representing local windows"
+	echo "                    of highest structure mass that overlap the signals"
+	echo " -f <file>    .. input file of sequences that are output of Bedtools getFasta (FASTA format, one line per sequence)"
+	echo "                 -> these sequences are direct input for clustering"
+	echo " -w <length>  .. length of local windows considered for RNA structure clustering"
+	echo " -h           .. help"
+	echo
+	exit 0
+}
+
+#########################################
+# parse options
+while getopts b:f:w:h ARG; do
+	case "$ARG" in
+		#############################################################
+		##### Input shoulf be a .fasta file, ideally from "bedtools getFasta" output
+		##### Please ensure no colons, e.g. ":", are in the fasta header 
+		##### as this will interfere with .newick tree format 
+		b) export INPUT_BED=$OPTARG;;
+		f) export INPUT_FASTA=$OPTARG;; 
+		w) SPAN=$OPTARG;;
+		h) HELP=1;;
+	esac
+done
+
+## usage, if necessary file and directories are given/exist
+[ "$INPUT_BED" -a ! -f "$INPUT_BED" ] && usage;
+[ "$INPUT_FASTA" -a ! -f "$INPUT_FASTA" ] && usage;
+[ "$HELP" ] && usage;
+[ "$INPUT_BED" -a "$INPUT_FASTA" ] && usage;
+[ ! "$INPUT_BED" -a ! "$INPUT_FASTA" ] && usage;
+
+
+#########################################
+# load envars
 module load gi/ViennaRNA/2.1.3
 module load marsmi/dotaligner/27032014
 module load marsmi/locarna/1.7.16
 # module load marsmi/carna
 module load marsmi/newick_utils/1.6
 module load stesee/PETfold/prebuilt/2.0
+module load stesee/RNAbound/prebuilt/1.1
 module load gi/R/3.0.0 							# requires the following R packages: pvclust, snow, ape
+module load gi/bedtools/2.19.1
+
+
+#########################################
+# read command line arguments
+## This works on Mac if $1 = `pwd`/file.fa
+#FILE_PATH=$INPUT_FASTA 
+## This works in linux
+#FILE_PATH=`readlink -f $INPUT_FASTA`
+if [ -f "$INPUT_FASTA" ];
+then
+	INPUT=$INPUT_FASTA
+	if [ `echo $INPUT_FASTA | awk '$1!~/^\//'` ]; then INPUT_FASTA=$PWD/$INPUT_FASTA; fi
+else
+	INPUT=$INPUT_BED
+	if [ `echo $INPUT_BED | awk '$1!~/^\//'` ]; then INPUT_BED=$PWD/$INPUT_BED; fi
+fi
+TEMP_NAME=${INPUT##*/}
+TEMP_NAME=${TEMP_NAME%.*}
+WORK_DIR=$PWD
+if [ -f "$INPUT_FASTA" ]; then FILE_NAME=$TEMP_NAME; else FILE_NAME=${TEMP_NAME}_bound_signal_span${SPAN}; fi
+
+echo -e "\e[93m[ NOTE ]\e[0m Work dir = "$WORK_DIR/$FILE_NAME
+echo -e "\e[93m[ NOTE ]\e[0m File name = "$FILE_NAME
+if [ ! -d  $WORK_DIR/$FILE_NAME ]; 	then	mkdir $WORK_DIR/$FILE_NAME; fi
+if [ -f "$INPUT_FASTA" ]; then ln -s $INPUT_FASTA $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta; fi
+
+
+#########################################
+# find local window of highest structure mass around input signals
+if [ -f "$INPUT_BED" ];
+then 
+	if [ ! -d  ${WORK_DIR}/${FILE_NAME}/preprocesseddata ]; 
+	then
+		mkdir ${WORK_DIR}/${FILE_NAME}/preprocesseddata
+		cd ${WORK_DIR}/${FILE_NAME}/preprocesseddata
+	
+		#merge and extend
+		echo -e "\e[93m{ NOTE ]\e[0m Merge input signals of less than 50nt distance"
+		bedtools merge -scores max -s -d 50 -nms -i ${INPUT_BED} > ${TEMP_NAME}_sorted_merged.bed  
+       		echo -e "\e[93m{ NOTE ]\e[0m Create windows of 200 nucleotides centered by merged input signals"
+ 		awk -v span=$SPAN 'BEGIN{OFS="\t"}{m=$2+int(($3-$2)/2); print $1,m-span,m+span,$4,$5,$6}' ${TEMP_NAME}_sorted_merged.bed > ${TEMP_NAME}_sorted_extended.bed
+
+		#get sequences
+       		echo -e "\e[93m{ NOTE ]\e[0m Get fasta file"
+		bedtools getfasta -fi $GENOME -bed ${TEMP_NAME}_sorted_extended.bed -s -fo ${TEMP_NAME}_sorted_extended.fasta
+	fi
+
+	if [ ! -d  ${WORK_DIR}/${FILE_NAME}/rnabound ]; 
+	then
+		RNA_BOUND=`which RNAbound`
+		[[ -z RNA_BOUND ]] && (echo -e "\e[91m[ ERROR ]\e[0m No RNAbound binary in PATH! exiting...\a" ; exit 1 )
+
+		WIN=$((SPAN+50))
+		echo -e "\e[93m{ NOTE ]\e[0m Find local windows of length $SPAN that have highest structure mass"
+		mkdir ${WORK_DIR}/${FILE_NAME}/rnabound
+		cd ${WORK_DIR}/${FILE_NAME}/rnabound
+	
+	  	#create dotplot using RNAplfold
+	   	RNAplfold -W $WIN -L $SPAN -c 0.0005 < ${WORK_DIR}/${FILE_NAME}/preprocesseddata/${TEMP_NAME}_sorted_extended.fasta
+	
+		for DOTPLOT in *_dp.ps;
+		do
+			PNAME=${DOTPLOT%_*}
+	
+		      	#convert the dotplot into matrix
+		 	dot2matrix.pl $DOTPLOT > ${PNAME}.bpp
+	
+			#execute RNAbound using the matrix file
+			#RNAbound -M ${PNAME}.bpp -g1 -w $SPAN | subsetrnabound.pl - 0.5 > ${PNAME}.bound
+			RNAbound -M ${PNAME}.bpp -g1 -w $SPAN | head -1 > ${PNAME}.bound
+			awk -v name=$PNAME 'BEGIN{OFS="\t"}{split($1,a,"-"); split(name,b,":"); split(b[2],c,"("); split(c[1],d,"-"); sub(")","",c[2]); print b[1],a[1]-1+d[1],a[2]+d[1],name,"0",c[2]}' ${PNAME}.bound >> ${TEMP_NAME}.bound_span${SPAN}.bed
+		done
+	
+		#check that window overlaps input signal (CHECK!!!)
+		bedtools intersect -wa -a ${TEMP_NAME}.bound_span${SPAN}.bed -b ${INPUT_BED} | sort -u > ${FILE_NAME}.bed
+	
+		#get sequence of local structure
+		bedtools getfasta -fi $GENOME -bed ${FILE_NAME}.bed -name -fo ${FILE_NAME}.fasta
+		ln -s ${WORK_DIR}/${FILE_NAME}/rnabound/${FILE_NAME}.fasta $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta
+	
+		rm -f *.bpp *_dp.ps *.bound.bed *.bound
+	fi
+fi
 
 #########################################
 # Generate dot plots from fasta file
 #>>>>>> Make sure .fasta is one sequence per line
 #>>>>>> Ensure name of interest is in fasta file
+## TO DO 
+#  check if .ps files already exist (# .ps == # grep ">" fasta )
 RNA_FOLD=`which RNAfold`
 [[ -z RNA_FOLD ]] && (echo -e "\e[91m[ ERROR ]\e[0m No RNAfold binary in PATH! exiting...\a" ; exit 1 )
 
-## This works on Mac if $1 = `pwd`/file.fa
-#FILE_PATH=$INPUT_FASTA 
-## This works in linux
-FILE_PATH=`readlink -f $INPUT_FASTA`
-FILE_NAME=${INPUT_FASTA##*/}
-FILE_NAME=${FILE_NAME%.*}
-WORK_DIR=${FILE_PATH%/*}
-
-echo -e "\e[93m[ NOTE ]\e[0m Work dir = "$WORK_DIR/$FILE_NAME
-echo -e "\e[93m[ NOTE ]\e[0m File name = "$FILE_NAME
-
-## TO DO 
-#  check if .ps files already exist (# .ps == # grep ">" fasta )
-if [ ! -d  $WORK_DIR/$FILE_NAME ]; 	then	mkdir $WORK_DIR/$FILE_NAME; fi
 if [ ! -d  $WORK_DIR/$FILE_NAME/dotplots ]; 
-	then
+then
 	echo -e "\e[93m[ NOTE ]\e[0m Formatting sequence names"
-	sed 's/\:/_/' $WORK_DIR/$INPUT_FASTA | sed 's/)//' | sed 's/(/_/' | sed 's/_+/_s/' | sed 's/_-/_r/' | sed 's/-/_/' \
+	sed 's/\:/_/' ${WORK_DIR}/${FILE_NAME}/${FILE_NAME}.fasta | sed 's/)//' | sed 's/(/_/' | sed 's/_+/_s/' | sed 's/_-/_r/' | sed 's/-/_/' \
 																			 >  $WORK_DIR/$FILE_NAME/formatted_input.fa
 	echo -e "\e[93m[ NOTE ]\e[0m Folding sequences"
 	mkdir $WORK_DIR/$FILE_NAME/dotplots
@@ -67,8 +182,8 @@ if [ ! -d  $WORK_DIR/$FILE_NAME/dotplots ];
 	sleep 2  	# Ensures we don;t get a premature error or warning message from RNAfold not completing on time
 	cd ../
 fi
-if [[ `ls $WORK_DIR/$FILE_NAME/dotplots/*dp.ps | wc -l` -ne `grep '>' $WORK_DIR/$INPUT_FASTA | wc -l` && -e $WORK_DIR/$FILE_NAME/formatted_input.fa ]]; 
-	then 
+if [[ `ls $WORK_DIR/$FILE_NAME/dotplots/*dp.ps | wc -l` -ne `grep '>' $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta | wc -l` && -e $WORK_DIR/$FILE_NAME/formatted_input.fa ]]; 
+then 
 	echo -e "\e[91m[ WARNING ]\e[0m inconsistent amount of _dp.ps files --> refolding input"
 	echo -e "\e[93m[ NOTE ]\e[0m Folding sequences"
 
@@ -163,17 +278,20 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 ##################				POSTPROCESSING 				##################
 ## Post processing of any identified clusters. 
 #### ${1}/${2}/srtd_a${ALPHA_STAT}_clusters/cluster.X/cluster.X.fa 
-#	if [[ ! -e ${WORK_DIR}/${FILE_NAME}/clusters/cluster.1/cluster.1.fa ]]; then
-	DOTALIGNER_CLUST=$( echo ${DOTALIGNER_CLUST} | cut -d " " -f 3 | cut -d "." -f 1 )		# Get job ID of existing process
-	ARRAY_SIZE=$( ls ${WORK_DIR}/${FILE_NAME}/dotaligner/clusters/cluster.*.fa | wc -l ) 						# Get amount of clusters to process
-	if [[ ARRAY_SIZE -eq 0 ]]; then 
-		echo -e "\e[91m[ WARNING ]\e[0m No clusters found in ${WORK_DIR}/${FILE_NAME}/dotaligner/clusters/"
-	fi
-	POST_CMD="${PATH_TO_SGE_SCRIPTS}/postClust.sge ${WORK_DIR}/${FILE_NAME} dotaligner"		# Setup the command and args
-	if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ; fi
-	CMD="qsub -hold_jid ${DOTALIGNER_CLUST} -cwd -V -N DA.postp -pe smp ${PROCS} -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ${POST_CMD}"						# Setup SGE command
+	if [[ ! -e ${WORK_DIR}/${FILE_NAME}/clusters/mlocarna.cluster.1/results/result.aln ]]; then
+		DOTALIGNER_CLUST=$( echo ${DOTALIGNER_CLUST} | cut -d " " -f 3 | cut -d "." -f 1 )		# Get job ID of existing process
+		ARRAY_SIZE=$( ls ${WORK_DIR}/${FILE_NAME}/dotaligner/clusters/cluster.*.fa | wc -l ) 						# Get amount of clusters to process
+		if [[ ARRAY_SIZE -eq 0 ]]; then 
+			echo -e "\e[91m[ WARNING ]\e[0m No clusters found in ${WORK_DIR}/${FILE_NAME}/dotaligner/clusters/"
+		else
+			echo -e "\e[93m[ NOTE ]\e[0m ${ARRAY_SIZE} clusters have been found!"
+		fi
+		POST_CMD="${PATH_TO_SGE_SCRIPTS}/postClust.sge ${WORK_DIR}/${FILE_NAME} dotaligner"		# Setup the command and args
+		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ; fi
+		CMD="qsub -hold_jid ${DOTALIGNER_CLUST} -cwd -V -N DA.postp -pe smp ${PROCS} -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ${POST_CMD}"		# Setup SGE command
 	
-	echo -e "\e[92m[ QSUB ]\e[0m $CMD" && DOTALIGNER_POST=$( $CMD )							# Print command and execute
+		echo -e "\e[92m[ QSUB ]\e[0m $CMD" && DOTALIGNER_POST=$( $CMD )							# Print command and execute
+	fi
 fi
 
 
