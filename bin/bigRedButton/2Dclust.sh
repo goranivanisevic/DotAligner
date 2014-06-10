@@ -13,13 +13,28 @@ export PATH_TO_SGE_SCRIPTS=${HOME}/DotAligner/bin/bigRedButton		# scripts used h
 export GENOME=/share/ClusterShare/biodata/contrib/genomeIndices_garvan/iGenomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa      # fasta file of reference genome (here hg19)
 export PROCS=16												# Cpus for clustering and mlocarna
 export BOOTSTRAPS=10000										# Number of bootstraps
-export ALPHA_STAT=0.99										# Alpha statistic for clustering specificity
+export ALPHA_STAT=0.8										# Alpha statistic for clustering specificity
+export BETA_STAT=0.4
 export SPAN=150
 
 ### What to run 
 RUN_LOCARNA=
 RUN_CARNA=
 RUN_DOTALIGNER="1"
+
+#########################################
+# DotAligner parameters
+KAPPA=0.3
+ALPHA=-0.1 #-0.05
+BETA=-0.01 #-0.05
+RADIUS=5
+THETA=0.5
+DELTANULL=0.5
+SEEDLEN=0
+MAXSHIFT=10
+SEQALN="" #"--seqaln"                        #set to "--seqaln" or ""
+PRECISION=2
+PNULL=0.01
 
 #########################################
 # usage
@@ -254,8 +269,10 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 ## Delete dotaligner/srtd.out.gz to re-run DotAligner
 	if [[ ! -e ${WORK_DIR}/${FILE_NAME}/dotaligner/srtd.out.gz ]]; then 
 		# ensure old files are all deleted if bein re-run
-		ALN_CMD="${PATH_TO_SGE_SCRIPTS}/dotaligner.sge ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt"
+		#ALN_CMD="${PATH_TO_SGE_SCRIPTS}/dotaligner.sge ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt"
+		ALN_CMD="${PATH_TO_SGE_SCRIPTS}/dotaligner.sge ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt $KAPPA $ALPHA $BETA $RADIUS $THETA $DELTANULL $SEEDLEN $MAXSHIFT $PRECISION $PNULL $SEQALN"
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.log ; fi
+		echo -e "KAPPA = "$KAPPA"\nALPHA = "$ALPHA"\nBETA = "$BETA"\nRADIUS = "$RADIUS"\nTHETA = "$THETA"\nDELTANULL = "$DELTANULL"\nSEEDLEN = "$SEEDLEN"\nMAXSHIFT = "$MAXSHIFT"\nPRECISION = "$PRECISION"\nPNULL = "$PNULL"\nSEQALN = "$SEQALN > ${WORK_DIR}/${FILE_NAME}/DotAligner.log
 		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD}"
 		echo -e "\e[92m[ QSUB ]\e[0m "$CMD && DOTALIGNER_ALN=$( $CMD )
 	fi	

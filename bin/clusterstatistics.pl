@@ -18,7 +18,7 @@
 # FC 0 1 1
 # FB 1 0 1
 # FA 2 1 0
-# Cluster(s) where the input families are True Positives (largest occurance)
+# Cluster(s) where the input families are True Positives (largest occurrance)
 # FC 1 2
 # FB 0 2
 # FA 0

@@ -52,7 +52,7 @@ if [[ -z $R_BIN ]]; then
 	echo -e "\e[91m[ ERROR ]\e[0m Rscript binary not found! Have you loaded the module/PATH properly? "
 	exit 1 
 fi
-$R_BIN ${PATH_TO_SGE_SCRIPTS}/clusterStrap.R ${1}/${2}/srtd.matrix ${1}/${2}/srtd.ids ${NSLOTS} ${BOOTSTRAPS} ${ALPHA_STAT}
+$R_BIN ${PATH_TO_SGE_SCRIPTS}/clusterStrap.R ${1}/${2}/srtd.matrix ${1}/${2}/srtd.ids ${NSLOTS} ${BOOTSTRAPS} ${ALPHA_STAT} ${BETA_STAT}
 
 #################################################################
 # User friendly output verification
