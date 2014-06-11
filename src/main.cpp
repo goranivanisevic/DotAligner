@@ -24,7 +24,7 @@ using namespace std;
 float kappa = 0.5;
 float alpha = -0.2;
 float beta  = -0.1;
-float deltanull = 0.5;
+//float deltanull = 0.5;
 
 float INFINITE = -1000;
 
@@ -44,6 +44,7 @@ int main( int argc, char ** argv )
         int radius = 0;
     	float theta = 0.25;
     	int seedlen = 15;
+    	float deltanull = 0.5;
 
         /* arguments */
         string  filename1, filename2;
@@ -219,7 +220,7 @@ int main( int argc, char ** argv )
 			offset = nwseq_seed( seq_1, seq_2, F, trF );
 		else
 			if( seedlen && len_1 > 2*seedlen && len_2 > 2*seedlen )
-				offset = nwdp_seed( seq_1, probDbl_1, probSgl_1, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, idx_2_aln, len_2, seedlen, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, sim, F, Q, P, trF, trQ, trP );
+				offset = nwdp_seed( seq_1, probDbl_1, probSgl_1, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, idx_2_aln, len_2, seedlen, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, sim, F, Q, P, trF, trQ, trP, deltanull );
 
 		/* run all pairs of pairing probabilities */
 		int k, l;
@@ -229,7 +230,7 @@ int main( int argc, char ** argv )
 			for( k = 0; k<len_1; k++)
 				if( offset + *min + maxshift >= *max && offset + *min - maxshift <= *max )
 					if( sim[ l ][ k ] == INFINITE )
-						sim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, k, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, l, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, F, Q, P, trF, trQ, trP );
+						sim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, k, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, l, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, F, Q, P, trF, trQ, trP, deltanull );
 
 		#if DEBUG
 			cout << "Similarity matrix: " << endl;
@@ -257,7 +258,7 @@ int main( int argc, char ** argv )
 		float similarity = 0.;
 		int open = 0, extended = 0;
 		for( int i=0; i<len_pair; i++ )
-			similarity += nwdp( seq_1, probDbl_1, probSgl_1, i, idx_1_aln, len_pair, seq_2, probDbl_2, probSgl_2, i, idx_2_aln, len_pair, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 0, F, Q, P, trF, trQ, trP );
+			similarity += nwdp( seq_1, probDbl_1, probSgl_1, i, idx_1_aln, len_pair, seq_2, probDbl_2, probSgl_2, i, idx_2_aln, len_pair, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 0, F, Q, P, trF, trQ, trP, 0.5 );
 		affinegapcosts(idx_1_aln, idx_2_aln, len_pair, open, extended);
 		//cout << similarity << " " << alpha*open << " " << beta*extended << " " << " " << len_pair << " " << len_aln << " " << extended << endl;
 		similarity = ( len_pair ) ? ( similarity + alpha * open + beta * extended ) / len_aln + 0.5 : 0;

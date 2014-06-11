@@ -141,7 +141,7 @@ void reducematrix(vector<float> & prob, int len, int precision)
 
    \returns  Similarity score ( 0 .. 1 )
 */
-float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int rel_idx_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int rel_idx_2, int * idx_2_aln, int len_2, float * subprobDbl_1, float * subprobSgl_1, float * subprobDbl_2, float * subprobSgl_2, bool freeEndGaps, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP )
+float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int rel_idx_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int rel_idx_2, int * idx_2_aln, int len_2, float * subprobDbl_1, float * subprobSgl_1, float * subprobDbl_2, float * subprobSgl_2, bool freeEndGaps, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP, float deltanull )
 {
     int idx_1 = idx_1_aln[ rel_idx_1 ];
     int idx_2 = idx_2_aln[ rel_idx_2 ];
@@ -163,7 +163,7 @@ float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, 
    			subprobDbl_2[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ rel_idx_2 - 1 - j ] );
     		subprobSgl_2[ j ] = probSgl_2.at( idx_2_aln[ rel_idx_2 - 1 - j ] );
     	}
-   		tau = nwdb_global_align_affinegaps( subprobDbl_1, subprobSgl_1, rel_idx_1, subprobDbl_2, subprobSgl_2, rel_idx_2, freeEndGaps, F, Q, P, trF, trQ, trP );
+   		tau = nwdb_global_align_affinegaps( subprobDbl_1, subprobSgl_1, rel_idx_1, subprobDbl_2, subprobSgl_2, rel_idx_2, freeEndGaps, F, Q, P, trF, trQ, trP, deltanull );
     }
     /* alignment downstream of the constraint pair ( rel_idx_1, rel_idx_2 ) */
     if( rel_idx_1<len_1-1 && rel_idx_2<len_2-1 )
@@ -176,11 +176,11 @@ float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, 
 			subprobDbl_2[ j ] = probDbl_2.at( sidx_2 + idx_2_aln[ rel_idx_2 + j + 1 ] );
     		subprobSgl_2[ j ] = probSgl_2.at( idx_2_aln[ rel_idx_2 + j +1 ] );
 		}
-		tau += nwdb_global_align_affinegaps( subprobDbl_1, subprobSgl_1, len_1 - rel_idx_1 - 1, subprobDbl_2, subprobSgl_2, len_2 - rel_idx_2 - 1, freeEndGaps, F, Q, P, trF, trQ, trP );
+		tau += nwdb_global_align_affinegaps( subprobDbl_1, subprobSgl_1, len_1 - rel_idx_1 - 1, subprobDbl_2, subprobSgl_2, len_2 - rel_idx_2 - 1, freeEndGaps, F, Q, P, trF, trQ, trP, deltanull );
     }
 
     /* sequence similarity */
-   	float sigma = nwdb_align_seq_sim( seq_1.c_str()[idx_1], probSgl_1.at(idx_1), seq_2.c_str()[idx_2], probSgl_2.at(idx_2) );
+   	float sigma = nwdb_align_seq_sim( seq_1.c_str()[idx_1], probSgl_1.at(idx_1), seq_2.c_str()[idx_2], probSgl_2.at(idx_2), deltanull );
 
    	/* final similarity */
     int minlen = ( len_2 > len_1 ) ? len_1 : len_2;
@@ -193,7 +193,7 @@ float nwdp( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, 
 /*
  * align seed of shorter sequence against longer sequence and return starting position of seed alignment
  */
-int nwdp_seed( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int * idx_2_aln, int len_2, int seedlen, float * subprobDbl_1, float * subprobSgl_1, float * subprobDbl_2, float * subprobSgl_2, float ** sim, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP )
+int nwdp_seed( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_1, int * idx_1_aln, int len_1, string seq_2, vector<float> & probDbl_2, vector<float> & probSgl_2, int * idx_2_aln, int len_2, int seedlen, float * subprobDbl_1, float * subprobSgl_1, float * subprobDbl_2, float * subprobSgl_2, float ** sim, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP, float deltanull )
 {
 	int maxlen = ( len_2 > len_1 ) ? len_2 : len_1;
 	int minlen = ( len_2 > len_1 ) ? len_1 : len_2;
@@ -210,9 +210,9 @@ int nwdp_seed( string seq_1, vector<float> & probDbl_1, vector<float> & probSgl_
 		for( int l = 0; l < maxlen - seedlen - k; l++ )
 		{
 			if( len_2 > len_1 )
-				sim[ l ][ k ] = seedsim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, k, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, l, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, F, Q, P, trF, trQ, trP );
+				sim[ l ][ k ] = seedsim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, k, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, l, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, F, Q, P, trF, trQ, trP, deltanull );
 			else
-				sim[ k ][ l ] = seedsim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, l, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, k, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, F, Q, P, trF, trQ, trP );
+				sim[ k ][ l ] = seedsim[ l ][ k ] = nwdp( seq_1, probDbl_1, probSgl_1, l, idx_1_aln, len_1, seq_2, probDbl_2, probSgl_2, k, idx_2_aln, len_2, subprobDbl_1, subprobSgl_1, subprobDbl_2, subprobSgl_2, 1, F, Q, P, trF, trQ, trP, deltanull );
 		}
 
 	/* run simalign_affinegaps */
@@ -402,7 +402,7 @@ void nwdp_initTB( char ** traceback, int L1, int L2 )
 }
 
 
-float nwdb_global_align_affinegaps( float* probDbl_1, float* probSgl_1, int L1, float* probDbl_2, float* probSgl_2, int L2, bool freeEndGaps, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP )
+float nwdb_global_align_affinegaps( float* probDbl_1, float* probSgl_1, int L1, float* probDbl_2, float* probSgl_2, int L2, bool freeEndGaps, float ** F, float ** Q, float ** P, char ** trF, char ** trQ, char ** trP, float deltanull )
 {
     float tau, sigma;;
     char ptr;
@@ -497,7 +497,7 @@ float nwdb_global_align_affinegaps( float* probDbl_1, float* probSgl_1, int L1, 
 /*
  * sequence similarity of nuc_1 and nuc_2
  */
-float nwdb_align_seq_sim( char nuc_1, float probSgl_1, char nuc_2, float probSgl_2 )
+float nwdb_align_seq_sim( char nuc_1, float probSgl_1, char nuc_2, float probSgl_2, float deltanull )
 {
 	float sigma = 0;
 	if( nuc_1 == nuc_2 )
