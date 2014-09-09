@@ -17,7 +17,9 @@ if [[ ! -d ${1}/${2} ]]; then mkdir ${1}/${2} ; fi
 
 # merge and tidy up
 if [[ ! -e ${1}/${2}/srtd.out.gz ]]; then
-	cat ${1}/array_*.${2} | sort -k 3,3n -k 4,4n > ${1}/${2}/srtd.out
+	cat ${1}/array_*.${2} | ${PATH_TO_SGE_SCRIPTS}/uniqCol1maxCol2.pl - 3,4 5 | sort -k 3,3n -k 4,4n > ${1}/${2}/srtd.out
+#	cat ${1}/array_*.${2} | sed -e 's/___[0-9]*___[0-9]*//g' | ${PATH_TO_SGE_SCRIPTS}/uniqCol1maxCol2.pl - 3,4 5 | sort -k 3,3n -k 4,4n > ${1}/${2}/srtd.out
+#	cat ${1}/array_*.${2} | sort -k 3,3n -k 4,4n > ${1}/${2}/srtd.out
 #	rm ${1}/array_*.${2}
 	gzip ${1}/DotAligner.log
 else
@@ -33,7 +35,7 @@ awk '{gsub(/,/,"\t");if($3==$4){print $3,$4,$5}else{print $3,$4,$5"\n"$4,$3,$5}}
 
 #################################################################
 # Get identifiers (fasta headers)
-cut -d " " -f 1 ${1}/${2}/srtd.out | uniq | while read line 
+cut -d " " -f 1 ${1}/${2}/srtd.out | sed 's/___[0-9]*//g' | uniq | while read line 
 do
 	echo ${line##*/} | sed 's/_dp.ps//'
 done > /tmp/${2}_srtd.ids
@@ -68,6 +70,7 @@ fi
 
 #################################################################
 #get FASTA file for each cluster
+gunzip -c ${1}/${2}/srtd.out.gz | awk '{print $1"\n"$2}' | sort | uniq -c | awk '{k=$2;gsub(/___[0-9]*/,"",k); print k,$2,$1}' | ${PATH_TO_SGE_SCRIPTS}/uniqCol1maxCol2.pl - 1 3 > ${1}/${2}/srtd.most.similar.windows
 if [[ ! -d ${1}/${2}/clusters ]]; then mkdir ${1}/${2}/clusters; fi
 CLNR=0
 awk '/"/' ${1}/${2}/srtd_a${ALPHA_STAT}_clusters | while read LINE; do
@@ -76,15 +79,20 @@ awk '/"/' ${1}/${2}/srtd_a${ALPHA_STAT}_clusters | while read LINE; do
   if [[ -e ${1}/${2}/clusters/cluster.${CLNR}.fa ]]; then 
     rm ${1}/${2}/clusters/cluster.${CLNR}.fa
   fi
-  echo	$LINE | awk '/"/{clnr++;for(i=2;i<=NF;i++){gsub(/"/,"");print $i}}' | \
-  			xargs -I {} grep -m 1 -A 1 "^>{}$" ${1}/formatted_input.fa  >> ${1}/${2}/clusters/cluster.${CLNR}.fa
+#  echo	$LINE | awk '/"/{clnr++;for(i=2;i<=NF;i++){gsub(/"/,"");print $i}}' | \
+#  			xargs -I {} grep -m 1 -A 1 "^>{}$" ${1}/formatted_input.fa  >> ${1}/${2}/clusters/cluster.${CLNR}.fa
+  echo $LINE | awk '/"/{clnr++;for(i=2;i<=NF;i++){gsub(/"/,"");print $i}}' | \
+	                xargs -I {} grep {} ${1}/${2}/srtd.most.similar.windows | \
+			awk '{split($2,a,/\//);sub(/_dp.ps/,"",a[length(a)]); print a[length(a)]}' | \
+			xargs -I {} grep -m 1 -A 1 "^>{}$" ${1}/formatted_input.fa | \
+			awk '{if(/^>/){split($1,a,"___"); print a[1]}else{print $0}}' >> ${1}/${2}/clusters/cluster.${CLNR}.fa
   
   #################################################################
   #get subtree for cluster
   ### PROBLEM: newick format discards ":" after "chr" in fasta header
   FID=$( awk '/^>/{sub(">","");print $1}' ${1}/${2}/clusters/cluster.${CLNR}.fa | \
   		xargs -I {} grep -o -b {} ${1}/${2}/srtd.newick | awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | head -1 )
-  LID=$(awk '/^>/{sub(">",""); print $1}' ${1}/${2}/clusters/cluster.${CLNR}.fa | \
+  LID=$(awk '/^>/{sub(">","");print $1}' ${1}/${2}/clusters/cluster.${CLNR}.fa | \
   		xargs -I {} grep -o -b {} ${1}/${2}/srtd.newick | awk '{split($1,a,":");print a[1],a[2]}' | sort -k1,1g | cut -d" " -f2 | tail -1 )
   #perl -sane '/([\d+\.,\(]*$fid.*$lid[:\d+\.,\)]+)/; $tree=$1; $tree=~s/:*\d+\.\d+,//; \
   #		$tree=~s/,$/\;/; print $tree."\n"' -- -fid=$FID -lid=$LID DNMT1.dotaligner3.clusters.newick

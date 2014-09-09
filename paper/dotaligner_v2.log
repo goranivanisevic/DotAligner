@@ -1,24 +1,24 @@
-This is pdfTeX, Version 3.1415926-2.4-1.40.13 (TeX Live 2012) (format=pdflatex 2012.6.30)  1 MAY 2014 14:15
+This is pdfTeX, Version 3.1415926-2.4-1.40.13 (TeX Live 2012/Debian) (format=pdflatex 2013.11.5)  12 JUN 2014 13:39
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
 **dotaligner_v2.tex
 (./dotaligner_v2.tex
 LaTeX2e <2011/06/27>
-Babel <v3.8m> and hyphenation patterns for english, dumylang, nohyphenation, ge
-rman-x-2012-05-30, ngerman-x-2012-05-30, afrikaans, ancientgreek, ibycus, arabi
-c, armenian, basque, bulgarian, catalan, pinyin, coptic, croatian, czech, danis
-h, dutch, ukenglish, usenglishmax, esperanto, estonian, ethiopic, farsi, finnis
-h, french, friulan, galician, german, ngerman, swissgerman, monogreek, greek, h
-ungarian, icelandic, assamese, bengali, gujarati, hindi, kannada, malayalam, ma
-rathi, oriya, panjabi, tamil, telugu, indonesian, interlingua, irish, italian, 
-kurmanji, latin, latvian, lithuanian, mongolian, mongolianlmc, bokmal, nynorsk,
- polish, portuguese, romanian, romansh, russian, sanskrit, serbian, serbianc, s
-lovak, slovenian, spanish, swedish, turkish, turkmen, ukrainian, uppersorbian, 
-welsh, loaded.
+Babel <v3.8m> and hyphenation patterns for english, dumylang, nohyphenation, et
+hiopic, farsi, arabic, pinyin, croatian, bulgarian, ukrainian, russian, slovak,
+ czech, danish, dutch, usenglishmax, ukenglish, finnish, french, basque, ngerma
+n, german, swissgerman, ngerman-x-2012-05-30, german-x-2012-05-30, monogreek, g
+reek, ibycus, ancientgreek, hungarian, bengali, tamil, hindi, telugu, gujarati,
+ sanskrit, malayalam, kannada, assamese, marathi, oriya, panjabi, italian, lati
+n, latvian, lithuanian, mongolian, mongolianlmc, nynorsk, bokmal, indonesian, e
+speranto, coptic, welsh, irish, interlingua, serbian, serbianc, slovenian, friu
+lan, romansh, estonian, romanian, armenian, uppersorbian, turkish, afrikaans, i
+celandic, kurmanji, polish, portuguese, galician, catalan, spanish, swedish, th
+ai, loaded.
 (./article.cls
 Document Class: article 2000/05/19 v1.4b Standard LaTeX document class
-(/usr/local/texlive/2012/texmf-dist/tex/latex/base/size10.clo
+(/usr/share/texlive/texmf-dist/tex/latex/base/size10.clo
 File: size10.clo 2007/10/19 v1.4h Standard LaTeX file (size option)
 )
 \c@part=\count79
@@ -33,34 +33,34 @@ File: size10.clo 2007/10/19 v1.4h Standard LaTeX file (size option)
 \belowcaptionskip=\skip42
 \bibindent=\dimen102
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/graphics/epsfig.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/epsfig.sty
 Package: epsfig 1999/02/16 v1.7a (e)psfig emulation (SPQR)
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/graphics/graphicx.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/graphicx.sty
 Package: graphicx 1999/02/16 v1.0f Enhanced LaTeX Graphics (DPC,SPQR)
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/graphics/keyval.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/keyval.sty
 Package: keyval 1999/03/16 v1.13 key=value parser (DPC)
 \KV@toks@=\toks14
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/graphics/graphics.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/graphics.sty
 Package: graphics 2009/02/05 v1.0o Standard LaTeX Graphics (DPC,SPQR)
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/graphics/trig.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/trig.sty
 Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/latexconfig/graphics.cfg
+(/usr/share/texlive/texmf-dist/tex/latex/latexconfig/graphics.cfg
 File: graphics.cfg 2010/04/23 v1.9 graphics configuration of TeX Live
 )
 Package graphics Info: Driver file: pdftex.def on input line 91.
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/pdftex-def/pdftex.def
+(/usr/share/texlive/texmf-dist/tex/latex/pdftex-def/pdftex.def
 File: pdftex.def 2011/05/27 v0.06d Graphics/color for pdfTeX
 
-(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/infwarerr.sty
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/infwarerr.sty
 Package: infwarerr 2010/04/08 v1.3 Providing info/warning/error messages (HO)
 )
-(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/ltxcmds.sty
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/ltxcmds.sty
 Package: ltxcmds 2011/11/09 v1.22 LaTeX kernel commands for general use (HO)
 )
 \Gread@gobject=\count87
@@ -71,7 +71,7 @@ Package: ltxcmds 2011/11/09 v1.22 LaTeX kernel commands for general use (HO)
 \epsfxsize=\dimen105
 \epsfysize=\dimen106
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/subfigure/subfigure.sty
+(/usr/share/texlive/texmf-dist/tex/latex/subfigure/subfigure.sty
 Package: subfigure 2002/03/15 v2.1.5 subfigure package
 \subfigtopskip=\skip43
 \subfigcapskip=\skip44
@@ -87,11 +87,11 @@ Package: subfigure 2002/03/15 v2.1.5 subfigure package
 ****************************************
 * Local config file subfigure.cfg used *
 ****************************************
-(/usr/local/texlive/2012/texmf-dist/tex/latex/subfigure/subfigure.cfg)
+(/usr/share/texlive/texmf-dist/tex/latex/subfigure/subfigure.cfg)
 \subfig@top=\skip47
 \subfig@bottom=\skip48
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/tools/calc.sty
+(/usr/share/texlive/texmf-dist/tex/latex/tools/calc.sty
 Package: calc 2007/08/22 v4.3 Infix arithmetic (KKT,FJ)
 \calc@Acount=\count92
 \calc@Bcount=\count93
@@ -104,10 +104,10 @@ LaTeX Info: Redefining \addtolength on input line 77.
 \calc@Ccount=\count94
 \calc@Cskip=\skip51
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/amssymb.sty
 Package: amssymb 2009/06/22 v3.00
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/amsfonts/amsfonts.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/amsfonts.sty
 Package: amsfonts 2009/06/22 v3.00 Basic AMSFonts support
 \@emptytoks=\toks15
 \symAMSa=\mathgroup4
@@ -115,24 +115,24 @@ Package: amsfonts 2009/06/22 v3.00 Basic AMSFonts support
 LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
 (Font)                  U/euf/m/n --> U/euf/b/n on input line 96.
 ))
-(/usr/local/texlive/2012/texmf-dist/tex/latex/amsmath/amstext.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amstext.sty
 Package: amstext 2000/06/29 v2.01
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/amsmath/amsgen.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsgen.sty
 File: amsgen.sty 1999/11/30 v2.0
 \@emptytoks=\toks16
 \ex@=\dimen111
 ))
-(/usr/local/texlive/2012/texmf-dist/tex/latex/amsmath/amsmath.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsmath.sty
 Package: amsmath 2000/07/18 v2.13 AMS math features
 \@mathmargin=\skip52
 
 For additional information on amsmath, use the `?' option.
-(/usr/local/texlive/2012/texmf-dist/tex/latex/amsmath/amsbsy.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsbsy.sty
 Package: amsbsy 1999/11/29 v1.2d
 \pmbraise@=\dimen112
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/amsmath/amsopn.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsopn.sty
 Package: amsopn 1999/12/14 v2.01 operator names
 )
 \inf@bad=\count95
@@ -173,7 +173,7 @@ LaTeX Font Info:    Redeclaring font encoding OMS on input line 568.
 LaTeX Info: Redefining \[ on input line 2666.
 LaTeX Info: Redefining \] on input line 2667.
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/amscls/amsthm.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amscls/amsthm.sty
 Package: amsthm 2009/07/02 v2.20.1
 \thm@style=\toks21
 \thm@bodyfont=\toks22
@@ -185,7 +185,7 @@ Package: amsthm 2009/07/02 v2.20.1
 \thm@headsep=\skip57
 \dth@everypar=\toks26
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/tools/multicol.sty
+(/usr/share/texlive/texmf-dist/tex/latex/tools/multicol.sty
 Package: multicol 2011/06/27 v1.7a multicolumn formatting (FMi)
 \c@tracingmulticols=\count107
 \mult@box=\box28
@@ -233,7 +233,7 @@ Package: multicol 2011/06/27 v1.7a multicolumn formatting (FMi)
 \colbreak@box=\box53
 \multicol@sort@counter=\count115
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/pslatex/pslatex.sty
+(/usr/share/texlive/texmf-dist/tex/latex/pslatex/pslatex.sty
 Package: pslatex 1996/07/24 v1.2 pslatex emulation (DPC)
 LaTeX Font Info:    Redeclaring symbol font `operators' on input line 65.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
@@ -267,16 +267,16 @@ LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
 (Font)                  OT1/cmr/m/it --> OT1/ptm/m/it on input line 75.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
 (Font)                  OT1/cmr/bx/it --> OT1/ptm/m/it on input line 75.
-)
-(./apalike.sty
+) (./apalike.sty
 \bibhang=\skip60
-) (./SCITEPRESS.sty
+)
+(./SCITEPRESS.sty
 Conference Style for SCITEPRESS for LaTeX 2e -- version of April 2013
 \titlebox=\skip61
-) (/usr/local/texlive/2012/texmf-dist/tex/latex/caption/caption.sty
+) (/usr/share/texlive/texmf-dist/tex/latex/caption/caption.sty
 Package: caption 2012/02/19 v3.2f Customizing captions (AR)
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/caption/caption3.sty
+(/usr/share/texlive/texmf-dist/tex/latex/caption/caption3.sty
 Package: caption3 2012/01/12 v1.4b caption3 kernel (AR)
 \captionmargin=\dimen128
 \captionmargin@=\dimen129
@@ -288,19 +288,19 @@ Package: caption3 2012/01/12 v1.4b caption3 kernel (AR)
 \c@ContinuedFloat=\count116
 Package caption Info: subfigure package is loaded.
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/graphics/color.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/color.sty
 Package: color 2005/11/14 v1.0j Standard LaTeX Color (DPC)
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/latexconfig/color.cfg
+(/usr/share/texlive/texmf-dist/tex/latex/latexconfig/color.cfg
 File: color.cfg 2007/01/18 v1.5 color configuration of teTeX/TeXLive
 )
 Package color Info: Driver file: pdftex.def on input line 130.
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/algorithms/algorithm.sty
+(/usr/share/texlive/texmf-dist/tex/latex/algorithms/algorithm.sty
 Package: algorithm 2009/08/24 v0.1 Document Style `algorithm' - floating enviro
 nment
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/float/float.sty
+(/usr/share/texlive/texmf-dist/tex/latex/float/float.sty
 Package: float 2001/11/08 v1.3d Float enhancements (AL)
 \c@float@type=\count117
 \float@exts=\toks27
@@ -308,13 +308,13 @@ Package: float 2001/11/08 v1.3d Float enhancements (AL)
 \@float@everytoks=\toks28
 \@floatcapt=\box55
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/base/ifthen.sty
+(/usr/share/texlive/texmf-dist/tex/latex/base/ifthen.sty
 Package: ifthen 2001/05/26 v1.1c Standard LaTeX ifthen package (DPC)
 )
 \@float@every@algorithm=\toks29
 \c@algorithm=\count118
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/algorithms/algorithmic.sty
+(/usr/share/texlive/texmf-dist/tex/latex/algorithms/algorithmic.sty
 Package: algorithmic 2009/08/24 v0.1 Document Style `algorithmic'
 \c@ALC@unique=\count119
 \c@ALC@line=\count120
@@ -336,7 +336,7 @@ LaTeX Font Info:    Checking defaults for OMS/pzccm/m/n on input line 42.
 LaTeX Font Info:    Try loading font information for OMS+pzccm on input line 42
 .
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/psnfss/omspzccm.fd
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/omspzccm.fd
 File: omspzccm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/pzccm.
 )
 LaTeX Font Info:    ... okay on input line 42.
@@ -345,7 +345,7 @@ LaTeX Font Info:    ... okay on input line 42.
 LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 42.
 LaTeX Font Info:    ... okay on input line 42.
 
-(/usr/local/texlive/2012/texmf-dist/tex/context/base/supp-pdf.mkii
+(/usr/share/texlive/texmf-dist/tex/context/base/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
 \scratchcounter=\count123
 \scratchdimen=\dimen134
@@ -358,15 +358,15 @@ LaTeX Font Info:    ... okay on input line 42.
 \MPnumerator=\count127
 \makeMPintoPDFobject=\count128
 \everyMPtoPDFconversion=\toks31
-) (/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/pdftexcmds.sty
+) (/usr/share/texlive/texmf-dist/tex/generic/oberdiek/pdftexcmds.sty
 Package: pdftexcmds 2011/11/29 v0.20 Utility functions of pdfTeX for LuaTeX (HO
 )
 
-(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/ifluatex.sty
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/ifluatex.sty
 Package: ifluatex 2010/03/01 v1.3 Provides the ifluatex switch (HO)
 Package ifluatex Info: LuaTeX not detected.
 )
-(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/ifpdf.sty
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/ifpdf.sty
 Package: ifpdf 2011/01/30 v2.3 Provides the ifpdf switch (HO)
 Package ifpdf Info: pdfTeX in PDF mode is detected.
 )
@@ -375,22 +375,22 @@ Package pdftexcmds Info: \pdf@primitive is available.
 Package pdftexcmds Info: \pdf@ifprimitive is available.
 Package pdftexcmds Info: \pdfdraftmode found.
 )
-(/usr/local/texlive/2012/texmf-dist/tex/latex/oberdiek/epstopdf-base.sty
+(/usr/share/texlive/texmf-dist/tex/latex/oberdiek/epstopdf-base.sty
 Package: epstopdf-base 2010/02/09 v2.5 Base part for package epstopdf
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/oberdiek/grfext.sty
+(/usr/share/texlive/texmf-dist/tex/latex/oberdiek/grfext.sty
 Package: grfext 2010/08/19 v1.1 Manage graphics extensions (HO)
 
-(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/kvdefinekeys.sty
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/kvdefinekeys.sty
 Package: kvdefinekeys 2011/04/07 v1.3 Define keys (HO)
 ))
-(/usr/local/texlive/2012/texmf-dist/tex/latex/oberdiek/kvoptions.sty
+(/usr/share/texlive/texmf-dist/tex/latex/oberdiek/kvoptions.sty
 Package: kvoptions 2011/06/30 v3.11 Key value format for package options (HO)
 
-(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/kvsetkeys.sty
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/kvsetkeys.sty
 Package: kvsetkeys 2012/04/25 v1.16 Key value parser (HO)
 
-(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/etexcmds.sty
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/etexcmds.sty
 Package: etexcmds 2011/02/16 v1.5 Avoid name clashes with e-TeX commands (HO)
 Package etexcmds Info: Could not find \expanded.
 (etexcmds)             That can mean that you are not using pdfTeX 1.50 or
@@ -402,7 +402,7 @@ Package grfext Info: Graphics extension search list:
 G,.JBIG2,.JB2,.eps]
 (grfext)             \AppendGraphicsExtensions on input line 452.
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
+(/usr/share/texlive/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
@@ -415,29 +415,29 @@ LaTeX Font Info:    Calculating math sizes for size <11> on input line 77.
 LaTeX Font Info:    Try loading font information for OT1+ptmcm on input line 77
 .
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/psnfss/ot1ptmcm.fd
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1ptmcm.fd
 File: ot1ptmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OT1/ptmcm.
 )
 LaTeX Font Info:    Try loading font information for OML+ptmcm on input line 77
 .
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/psnfss/omlptmcm.fd
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/omlptmcm.fd
 File: omlptmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OML/ptmcm.
 )
 LaTeX Font Info:    Try loading font information for OMX+psycm on input line 77
 .
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/psnfss/omxpsycm.fd
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/omxpsycm.fd
 File: omxpsycm.fd 2000/01/03 Fontinst v1.801 font definitions for OMX/psycm.
 )
 LaTeX Font Info:    Try loading font information for U+msa on input line 77.
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/amsfonts/umsa.fd
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2009/06/22 v3.00 AMS symbols A
 )
 LaTeX Font Info:    Try loading font information for U+msb on input line 77.
 
-(/usr/local/texlive/2012/texmf-dist/tex/latex/amsfonts/umsb.fd
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2009/06/22 v3.00 AMS symbols B
 )
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <11> not available
@@ -463,17 +463,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 77--77
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <13> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 79.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 84.
-
-LaTeX Warning: Citation `Gupta20393566' on page 1 undefined on input line 84.
-
-
-LaTeX Warning: Citation `Burge23125362' on page 1 undefined on input line 87.
-
-
-LaTeX Warning: Citation `Gardner15860779' on page 1 undefined on input line 96.
-
-
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 106.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7.4> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 106.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
@@ -489,40 +479,19 @@ Underfull \hbox (badness 1552) in paragraph at lines 102--112
  []
 
 
-LaTeX Warning: Citation `sankoff85' on page 1 undefined on input line 113.
+Underfull \hbox (badness 1342) in paragraph at lines 113--129
+[]\OT1/ptm/m/n/10 Simultaneous align-ment and fold-ing (Sankoff,
+ []
 
 
-LaTeX Warning: Citation `McCaskill:1990' on page 1 undefined on input line 118.
+Underfull \vbox (badness 2495) has occurred while \output is active []
 
-
-
-LaTeX Warning: Citation `Hofacker15073017' on page 1 undefined on input line 12
-0.
-
-
-LaTeX Warning: Citation `Will17432929' on page 1 undefined on input line 121.
-
-
-LaTeX Warning: Citation `Palu2010' on page 1 undefined on input line 126.
-
-
-LaTeX Warning: Citation `Sorescu2012' on page 1 undefined on input line 126.
-
-[1{/usr/local/texlive/2012/texmf-var/fonts/map/pdftex/updmap/pdftex.map}
+ [1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}
 
 
 
 
 ]
-
-LaTeX Warning: Citation `Sato18647390' on page 2 undefined on input line 131.
-
-
-LaTeX Warning: Citation `Heyne22689765' on page 2 undefined on input line 132.
-
-
-LaTeX Warning: Citation `Palu2010' on page 2 undefined on input line 149.
-
 
 Package amsmath Warning: Foreign command \atop;
 (amsmath)                \frac or \genfrac should be used instead
@@ -537,9 +506,13 @@ cm/m/n/10 ) + [] \OML/ptmcm/m/it/10 ^^\\OT1/ptmcm/m/n/10 (\OML/ptmcm/m/it/10 i;
 \OML/ptmcm/m/it/10 L;
  []
 
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
 LaTeX Font Info:    Try loading font information for OT1+courier on input line 
 177.
 LaTeX Font Info:    No file OT1courier.fd. on input line 177.
+
 
 LaTeX Font Warning: Font shape `OT1/courier/m/n' undefined
 (Font)              using `OT1/cmr/m/n' instead on input line 177.
@@ -553,10 +526,6 @@ LaTeX Font Warning: Font shape `OMS/courier/m/n' undefined
 (Font)              for symbol `textbraceleft' on input line 178.
 
 [2]
-
-LaTeX Warning: Citation `Will17432929' on page 3 undefined on input line 241.
-
-
 Overfull \hbox (4.72488pt too wide) detected at line 261
 \OML/ptmcm/m/it/10 ^^\\OT1/ptmcm/m/n/10 (\OML/ptmcm/m/it/10 i; j; i[]; j[]\OT1/
 ptmcm/m/n/10 ) = []
@@ -573,10 +542,10 @@ Underfull \hbox (badness 10000) in paragraph at lines 338--345
 
 [3]
 Package epstopdf Info: Source file: <snornal140_roc.eps>
-(epstopdf)                    date: 2013-12-12 16:28:04
+(epstopdf)                    date: 2013-11-29 15:58:43
 (epstopdf)                    size: 16162 bytes
 (epstopdf)             Output file: <snornal140_roc-eps-converted-to.pdf>
-(epstopdf)                    date: 2013-12-12 16:28:04
+(epstopdf)                    date: 2013-11-29 15:58:43
 (epstopdf)                    size: 7569 bytes
 (epstopdf)             Command: <repstopdf --outfile=snornal140_roc-eps-convert
 ed-to.pdf snornal140_roc.eps>
@@ -591,11 +560,11 @@ Package pdftex.def Info: snornal140_roc-eps-converted-to.pdf used on input line
 (pdftex.def)             Requested size: 202.31464pt x 202.80934pt.
 Package epstopdf Info: Source file: <snornal140_dotaligner_g4_bootstrap1000.eps
 >
-(epstopdf)                    date: 2013-12-12 16:28:04
+(epstopdf)                    date: 2013-11-29 15:58:43
 (epstopdf)                    size: 75129 bytes
 (epstopdf)             Output file: <snornal140_dotaligner_g4_bootstrap1000-eps
 -converted-to.pdf>
-(epstopdf)                    date: 2013-12-12 16:28:04
+(epstopdf)                    date: 2013-11-29 15:58:43
 (epstopdf)                    size: 23718 bytes
 (epstopdf)             Command: <repstopdf --outfile=snornal140_dotaligner_g4_b
 ootstrap1000-eps-converted-to.pdf snornal140_dotaligner_g4_bootstrap1000.eps>
@@ -629,12 +598,17 @@ Underfull \hbox (badness 1348) in paragraph at lines 441--442
  []
 
 
-Underfull \hbox (badness 1132) in paragraph at lines 446--447
+Underfull \hbox (badness 2035) in paragraph at lines 449--450
+\OT1/ptm/m/n/10 Benchmarking was per-formed on both com-plete
+ []
+
+
+Underfull \hbox (badness 1132) in paragraph at lines 449--450
 \OT1/ptm/m/n/10 RNA struc-tures (global align-ment) and ran-domly
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 446--447
+Underfull \hbox (badness 10000) in paragraph at lines 449--450
 
  []
 
@@ -729,26 +703,52 @@ Overfull \hbox (1.5708pt too wide) in paragraph at lines 456--468
  []
 
 
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-
-
-LaTeX Warning: Citation `Bernhart:Hofacker:Stadler:Local_RNA_base:2006' on page
- 5 undefined on input line 527.
-
-
-LaTeX Warning: Citation `Dotu19908358' on page 5 undefined on input line 529.
+Underfull \hbox (badness 1975) in paragraph at lines 517--518
+[]\OT1/ptm/m/n/10 Generate (dis)similarity ma-trix from pair-wise
+ []
 
 [5 <./snornal140_dotaligner_g4_bootstrap1000-eps-converted-to.pdf>]
+LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <10> not available
+(Font)              Font shape `OMS/pzccm/m/n' tried instead on input line 541.
 
-LaTeX Warning: Citation `Hofacker15073017' on page 6 undefined on input line 53
-5.
+
+Underfull \hbox (badness 10000) in paragraph at lines 545--546
+[]\OT1/ptm/m/n/10 Try op-tion \OT1/pcr/m/n/10 --pw-aligner
+ []
 
 
-LaTeX Warning: Citation `Seemann2008' on page 6 undefined on input line 538.
+Underfull \hbox (badness 1152) in paragraph at lines 545--546
+\OT1/pcr/m/n/10 path/to/DotAligner \OT1/ptm/m/n/10 and see if it will give
+ []
 
-No file dotaligner_v2.bbl.
-[6
+
+Underfull \hbox (badness 1681) in paragraph at lines 548--550
+[]\OT1/ptm/m/n/10 Will this cause (m)locarna to use the en-tire
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 548--550
+\OT1/ptm/m/n/10 the fol-low-ing pa-ram-e-ters \OT1/pcr/m/n/10 --probabilistic
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 548--550
+\OT1/pcr/m/n/10 --consistency-transformation
+ []
+
+(./dotaligner_v2.bbl
+LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <9> not available
+(Font)              Font shape `OMS/pzccm/m/n' tried instead on input line 5.
+ [6]
+Missing character: There is no â in font ptmri7t!
+Missing character: There is no € in font ptmri7t!
+Missing character: There is no “ in font ptmri7t!
+
+Underfull \hbox (badness 3407) in paragraph at lines 59--63
+[]\OT1/ptm/m/n/9 Sankoff, D. (1985).  Si-mul-ta-ne-ous so-lu-tion of the
+ []
+
+) [7
 
 ] (./dotaligner_v2.aux)
 
@@ -756,27 +756,26 @@ LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
  ) 
 Here is how much of TeX's memory you used:
- 4512 strings out of 493488
- 65255 string characters out of 3141326
- 130530 words of memory out of 3000000
- 7684 multiletter control sequences out of 15000+200000
- 64008 words of font info for 138 fonts, out of 3000000 for 9000
+ 4521 strings out of 493485
+ 64813 string characters out of 3143526
+ 130837 words of memory out of 3000000
+ 7689 multiletter control sequences out of 15000+200000
+ 65121 words of font info for 140 fonts, out of 3000000 for 9000
  957 hyphenation exceptions out of 8191
  38i,10n,38p,384b,691s stack positions out of 5000i,500n,10000p,200000b,50000s
-{/usr/local/texlive/2012/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/t
-exlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/te
-xlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/tex
-live/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texli
-ve/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texliv
-e/2012/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2012/t
-exmf-dist/fonts/type1/urw/symbol/usyr.pfb></usr/local/texlive/2012/texmf-dist/f
-onts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1
-/urw/times/utmr8a.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/urw/times
-/utmri8a.pfb>
-Output written on dotaligner_v2.pdf (6 pages, 156829 bytes).
+{/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texliv
+e/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texm
+f-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist
+/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/
+type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/
+urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/symbol/us
+yr.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/sh
+are/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/tex
+mf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on dotaligner_v2.pdf (7 pages, 164203 bytes).
 PDF statistics:
- 77 PDF objects out of 1000 (max. 8388607)
- 53 compressed objects within 1 object stream
+ 82 PDF objects out of 1000 (max. 8388607)
+ 57 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  11 words of extra memory for PDF output out of 10000 (max. 10000000)
 

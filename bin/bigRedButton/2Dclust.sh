@@ -13,8 +13,8 @@ export PATH_TO_SGE_SCRIPTS=${HOME}/DotAligner/bin/bigRedButton		# scripts used h
 export GENOME=/share/ClusterShare/biodata/contrib/genomeIndices_garvan/iGenomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa      # fasta file of reference genome (here hg19)
 export PROCS=16												# Cpus for clustering and mlocarna
 export BOOTSTRAPS=10000										# Number of bootstraps
-export ALPHA_STAT=0.8										# Alpha statistic for clustering specificity
-export BETA_STAT=0.4
+export ALPHA_STAT=0.9										# Alpha statistic for clustering specificity
+export BETA_STAT=0.0
 export SPAN=150
 
 ### What to run 
@@ -25,16 +25,16 @@ RUN_DOTALIGNER="1"
 #########################################
 # DotAligner parameters
 KAPPA=0.3
-ALPHA=-0.1 #-0.05
-BETA=-0.01 #-0.05
-RADIUS=5
+ALPHA=-0.05 #-0.1
+BETA=-0.05 #-0.001
+RADIUS=1 #5
 THETA=0.5
-DELTANULL=0.5
+DELTANULL=0 #0.5
 SEEDLEN=0
-MAXSHIFT=10
+MAXSHIFT=10 #20
 SEQALN="" #"--seqaln"                        #set to "--seqaln" or ""
-PRECISION=2
-PNULL=0.01
+PRECISION=4 #2
+PNULL=0.0005 #0.01
 
 #########################################
 # usage
@@ -131,7 +131,8 @@ then
 		#merge and extend
 		echo -e "\e[93m{ NOTE ]\e[0m Merge input signals of less than 50nt distance"
 		bedtools merge -scores max -s -d 50 -nms -i ${INPUT_BED} > ${TEMP_NAME}_sorted_merged.bed  
-       		echo -e "\e[93m{ NOTE ]\e[0m Create windows of 200 nucleotides centered by merged input signals"
+		WINDOW=$((SPAN+SPAN))
+       		echo -e "\e[93m{ NOTE ]\e[0m Create windows of $WINDOW nucleotides centered by merged input signals"
  		awk -v span=$SPAN 'BEGIN{OFS="\t"}{m=$2+int(($3-$2)/2); print $1,m-span,m+span,$4,$5,$6}' ${TEMP_NAME}_sorted_merged.bed > ${TEMP_NAME}_sorted_extended.bed
 
 		#get sequences
@@ -231,9 +232,16 @@ if [[ ! -e $WORK_DIR/$FILE_NAME/pairwise_comparisons.txt  ]]; then
 	i=1
 	while [ $i -le $STRUCTURES ]; do
  		for (( j = $i ; j <= $STRUCTURES; j++ )); do
-	     	echo -n `head -n $i $FILE_LIST | tail -n 1`" "
-	     	echo -n `head -n $j $FILE_LIST | tail -n 1`" "
-	     	echo $i" "$j
+		     	#echo -n `head -n $i $FILE_LIST | tail -n 1`" "
+	     		#echo -n `head -n $j $FILE_LIST | tail -n 1`" "
+	     		#echo $i" "$j
+			FILE1=`head -n $i $FILE_LIST | tail -n 1`
+			FILE2=`head -n $j $FILE_LIST | tail -n 1`
+			TEMP=${FILE1%___*}
+			IDX1=${TEMP##*___}
+			TEMP=${FILE2%___*}
+			IDX2=${TEMP##*___}
+			echo $FILE1" "$FILE2" "$IDX1" "$IDX2
 		done
 		i=$(($i+1))
 	done > $WORK_DIR/$FILE_NAME/pairwise_comparisons.txt 
