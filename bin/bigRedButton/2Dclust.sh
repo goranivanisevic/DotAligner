@@ -281,11 +281,10 @@ ARRAY_SIZE=$( ls ${WORK_DIR}/${FILE_NAME}/array_* | wc -l )
 ##########################################################################
 ##################				DOTALIGNER 				##################
 if [[ ! -z $RUN_DOTALIGNER ]]; then 
-	echo -e "\e[93m[ NOTE ]\e[0m Launching all vs. all pairwise alignments with DotAligner "
-
 ## Attempt recovery if alignment was successful
 ## Delete dotaligned.checkpoint to re-run DotAligner
 	if [[ ! -e ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint ]]; then 
+		echo -e "\e[93m[ NOTE ]\e[0m Launching all vs. all pairwise alignments with DotAligner "
 		# ensure old files are all deleted if bein re-run
 		#ALN_CMD="${PATH_TO_SGE_SCRIPTS}/dotaligner.sge ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt"
 		ALN_CMD="${PATH_TO_SGE_SCRIPTS}/dotaligner.sge ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt $KAPPA $ALPHA $BETA $RADIUS $THETA $DELTANULL $SEEDLEN $MAXSHIFT $PRECISION $PNULL $SEQALN"
@@ -294,6 +293,9 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		echo -e "     KAPPA = "$KAPPA"\nALPHA = "$ALPHA"\nBETA = "$BETA"\nRADIUS = "$RADIUS"\nTHETA = "$THETA"\nDELTANULL = "$DELTANULL"\nSEEDLEN = "$SEEDLEN"\nMAXSHIFT = "$MAXSHIFT"\nPRECISION = "$PRECISION"\nPNULL = "$PNULL"\nSEQALN = "$SEQALN > ${WORK_DIR}/${FILE_NAME}/DotAligner.log
 		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD} && touch ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint"
 		echo -e "\e[92m[ QSUB ]\e[0m "$CMD && DOTALIGNER_ALN=$( $CMD )
+	else
+		echo -e "\e[93m[ NOTE ]\e[0m Parwise alignments already exist! Moving on... "
+		echo -e "		If you want to re-run this step, please delete checkpoint file: "${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint 
 	fi	
 ##################				CLUSTERING 				##################
 ## Attempt recovery if clustering was successful
