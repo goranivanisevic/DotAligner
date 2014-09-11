@@ -232,16 +232,26 @@ if [[ ! -e $WORK_DIR/$FILE_NAME/pairwise_comparisons.txt  ]]; then
 	i=1
 	while [ $i -le $STRUCTURES ]; do
  		for (( j = $i ; j <= $STRUCTURES; j++ )); do
-		     	#echo -n `head -n $i $FILE_LIST | tail -n 1`" "
-	     		#echo -n `head -n $j $FILE_LIST | tail -n 1`" "
-	     		#echo $i" "$j
-			FILE1=`head -n $i $FILE_LIST | tail -n 1`
-			FILE2=`head -n $j $FILE_LIST | tail -n 1`
-			TEMP=${FILE1%___*}
-			IDX1=${TEMP##*___}
-			TEMP=${FILE2%___*}
-			IDX2=${TEMP##*___}
-			echo $FILE1" "$FILE2" "$IDX1" "$IDX2
+		    echo -n `head -n $i $FILE_LIST | tail -n 1`" "
+	     	echo -n `head -n $j $FILE_LIST | tail -n 1`" "
+	     	echo $i" "$j
+			
+			## This messes up downstream processing in postAlign.sge
+			## It produces :
+			## 	Filename_1 Filename_2 Filename_1 Filename_2
+			## instead of :
+			##	Filename_1 Filename_2 1 2
+			## vvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+			#FILE1=`head -n $i $FILE_LIST | tail -n 1`
+			#FILE2=`head -n $j $FILE_LIST | tail -n 1`
+			#TEMP=${FILE1%___*}
+			#IDX1=${TEMP##*___}
+			#TEMP=${FILE2%___*}
+			#IDX2=${TEMP##*___}
+			#echo $FILE1" "$FILE2" "$IDX1" "$IDX2  
+			
+			## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 		done
 		i=$(($i+1))
 	done > $WORK_DIR/$FILE_NAME/pairwise_comparisons.txt 
