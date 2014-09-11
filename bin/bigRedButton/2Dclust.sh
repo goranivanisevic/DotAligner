@@ -11,7 +11,7 @@
 MAX_CPUS=192
 export PATH_TO_SGE_SCRIPTS=${HOME}/DotAligner/bin/bigRedButton		# scripts used herein
 export GENOME=/share/ClusterShare/biodata/contrib/genomeIndices_garvan/iGenomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa      # fasta file of reference genome (here hg19)
-export PROCS=16												# Cpus for clustering and mlocarna
+export PROCS=6												# Cpus for clustering and mlocarna
 export BOOTSTRAPS=10000										# Number of bootstraps
 export ALPHA_STAT=0.9										# Alpha statistic for clustering specificity
 export BETA_STAT=0.0
@@ -258,7 +258,7 @@ else
 		# split data files
 		LINES=`wc -l ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt | awk '{print $1}'`
 		#echo $LINES
-		LINES_PER_ARRAY=$(( ${LINES}/${MAX_CPUS}+1  ))
+		LINES_PER_ARRAY=$(( ${LINES}/${MAX_CPUS}+1  )) # ensures less array jobs are run than max_slots; balanced IO/CPU performance 
 		#echo $LINES_PER_ARRAY
 		cd $WORK_DIR/$FILE_NAME
 		split -d -a 3 -l $LINES_PER_ARRAY $WORK_DIR/$FILE_NAME/pairwise_comparisons.txt  array_
@@ -274,14 +274,15 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 	echo -e "\e[93m[ NOTE ]\e[0m Launching all vs. all pairwise alignments with DotAligner "
 
 ## Attempt recovery if alignment was successful
-## Delete dotaligner/srtd.out.gz to re-run DotAligner
-	if [[ ! -e ${WORK_DIR}/${FILE_NAME}/dotaligner/srtd.out.gz ]]; then 
+## Delete dotaligned.checkpoint to re-run DotAligner
+	if [[ ! -e ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint ]]; then 
 		# ensure old files are all deleted if bein re-run
 		#ALN_CMD="${PATH_TO_SGE_SCRIPTS}/dotaligner.sge ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt"
 		ALN_CMD="${PATH_TO_SGE_SCRIPTS}/dotaligner.sge ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt $KAPPA $ALPHA $BETA $RADIUS $THETA $DELTANULL $SEEDLEN $MAXSHIFT $PRECISION $PNULL $SEQALN"
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.log ; fi
-		echo -e "KAPPA = "$KAPPA"\nALPHA = "$ALPHA"\nBETA = "$BETA"\nRADIUS = "$RADIUS"\nTHETA = "$THETA"\nDELTANULL = "$DELTANULL"\nSEEDLEN = "$SEEDLEN"\nMAXSHIFT = "$MAXSHIFT"\nPRECISION = "$PRECISION"\nPNULL = "$PNULL"\nSEQALN = "$SEQALN > ${WORK_DIR}/${FILE_NAME}/DotAligner.log
-		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD}"
+		echo -e "\e[93m[ NOTE ]\e[0m DotAligner parameters:"
+		echo -e "     KAPPA = "$KAPPA"\nALPHA = "$ALPHA"\nBETA = "$BETA"\nRADIUS = "$RADIUS"\nTHETA = "$THETA"\nDELTANULL = "$DELTANULL"\nSEEDLEN = "$SEEDLEN"\nMAXSHIFT = "$MAXSHIFT"\nPRECISION = "$PRECISION"\nPNULL = "$PNULL"\nSEQALN = "$SEQALN > ${WORK_DIR}/${FILE_NAME}/DotAligner.log
+		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD} && touch ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint"
 		echo -e "\e[92m[ QSUB ]\e[0m "$CMD && DOTALIGNER_ALN=$( $CMD )
 	fi	
 ##################				CLUSTERING 				##################
