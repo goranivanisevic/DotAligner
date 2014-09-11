@@ -17,17 +17,21 @@ if [[ ! -d ${1}/${2} ]]; then mkdir ${1}/${2} ; fi
 
 # merge and tidy up
 if [[ ! -e ${1}/${2}/srtd.out.gz ]]; then
-	cat ${1}/array_*.${2} | ${PATH_TO_SGE_SCRIPTS}/uniqCol1maxCol2.pl - 3,4 5 | sort -k 3,3n -k 4,4n > ${1}/${2}/srtd.out
+  echo -e "\e[93m[ NOTE ]\e[0m Merging and sorting alignment files..."
+## Is the perl script here necessary?  
+#	cat ${1}/array_*.${2} | ${PATH_TO_SGE_SCRIPTS}/uniqCol1maxCol2.pl - 3,4 5 | sort -k 3,3n -k 4,4n > ${1}/${2}/srtd.out
 #	cat ${1}/array_*.${2} | sed -e 's/___[0-9]*___[0-9]*//g' | ${PATH_TO_SGE_SCRIPTS}/uniqCol1maxCol2.pl - 3,4 5 | sort -k 3,3n -k 4,4n > ${1}/${2}/srtd.out
-#	cat ${1}/array_*.${2} | sort -k 3,3n -k 4,4n > ${1}/${2}/srtd.out
+	cat ${1}/array_*.${2} | sort -k 3,3n -k 4,4n > ${1}/${2}/srtd.out
 #	rm ${1}/array_*.${2}
 	gzip ${1}/DotAligner.log
 else
+  echo -e "\e[93m[ NOTE ]\e[0m Extracting sorted output from previous run..."
 	gunzip ${1}/${2}/srtd.out.gz
 fi
 
 #################################################################
 # Build matrix from pairwise scores
+echo -e "\e[93m[ NOTE ]\e[0m Building similarity matrix..."
 num_cols=$(( `cut -d " " -f 3 ${1}/${2}/srtd.out | grep -w 1 | wc -l` ))
 awk '{gsub(/,/,"\t");if($3==$4){print $3,$4,$5}else{print $3,$4,$5"\n"$4,$3,$5}}' ${1}/${2}/srtd.out \
 	| sort -k 1,1n -k 2,2n | awk -v len=$num_cols 'BEGIN{ORS="	"}{print $3," "; if(NR%len == 0){print "\n"}}' \
