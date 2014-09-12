@@ -11,9 +11,9 @@
 MAX_CPUS=192
 export PATH_TO_SGE_SCRIPTS=${HOME}/DotAligner/bin/bigRedButton		# scripts used herein
 export GENOME=/share/ClusterShare/biodata/contrib/genomeIndices_garvan/iGenomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa      # fasta file of reference genome (here hg19)
-export PROCS=6												# Cpus for clustering and mlocarna
+export PROCS=8												# Cpus for clustering and mlocarna
 export BOOTSTRAPS=10000										# Number of bootstraps
-export ALPHA_STAT=0.9										# Alpha statistic for clustering specificity
+export ALPHA_STAT=0.99										# Alpha statistic for clustering specificity
 export BETA_STAT=0.0
 export SPAN=150
 
@@ -116,7 +116,9 @@ if [ -f "$INPUT_FASTA" ]; then FILE_NAME=$TEMP_NAME; else FILE_NAME=${TEMP_NAME}
 echo -e "\e[93m[ NOTE ]\e[0m Work dir = "$WORK_DIR/$FILE_NAME
 echo -e "\e[93m[ NOTE ]\e[0m File name = "$FILE_NAME
 if [ ! -d  $WORK_DIR/$FILE_NAME ]; 	then	mkdir $WORK_DIR/$FILE_NAME; fi
-if [ -f "$INPUT_FASTA" ]; then ln -s $INPUT_FASTA $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta; fi
+if [ -f "$INPUT_FASTA" && ! -e $INPUT_FASTA $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta ]
+	then ln -s $INPUT_FASTA $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta
+fi
 
 
 #########################################
@@ -291,11 +293,11 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.log ; fi
 		echo -e "\e[93m[ NOTE ]\e[0m DotAligner parameters:"
 		echo -e "     KAPPA = "$KAPPA"\nALPHA = "$ALPHA"\nBETA = "$BETA"\nRADIUS = "$RADIUS"\nTHETA = "$THETA"\nDELTANULL = "$DELTANULL"\nSEEDLEN = "$SEEDLEN"\nMAXSHIFT = "$MAXSHIFT"\nPRECISION = "$PRECISION"\nPNULL = "$PNULL"\nSEQALN = "$SEQALN > ${WORK_DIR}/${FILE_NAME}/DotAligner.log
-		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD} && touch ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint"
+		CMD="qsub -cwd -V -N DotAligner -pe smp -l mem_requested=32G,h_vmem=8G 1 -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD} && touch ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint"
 		echo -e "\e[92m[ QSUB ]\e[0m "$CMD && DOTALIGNER_ALN=$( $CMD )
 	else
 		echo -e "\e[93m[ NOTE ]\e[0m Parwise alignments already exist! Moving on... "
-		echo -e "		If you want to re-run this step, please delete checkpoint file: "${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint 
+		echo -e "	If you want to re-run this step, please delete checkpoint file: "${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint 
 	fi	
 ##################				CLUSTERING 				##################
 ## Attempt recovery if clustering was successful
@@ -305,7 +307,7 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		rm -rf ${WORK_DIR}/${FILE_NAME}/dotaligner/* 
 		DOTALIGNER_ALN=$( echo ${DOTALIGNER_ALN} | cut -d " " -f 3 | cut -d "." -f 1 )
 		echo -e "\e[93m[ NOTE ]\e[0m Clustering output of DOTALIGNER, awaiting completion of job--if required: "$DOTALIGNER_ALN
-		echo -e "         This may take a while... you could run this as a background process (ctrl-z; bg)"
+		echo -e "          This may take a while... you could run this as a background process (ctrl-z; bg)"
 		CLUST_CMD="${PATH_TO_SGE_SCRIPTS}/postAlign.sge ${WORK_DIR}/${FILE_NAME} dotaligner"
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ; fi
 		CMD="qsub -sync y -hold_jid ${DOTALIGNER_ALN} -cwd -V -N DA.clust -pe smp ${PROCS} -b y -j y \

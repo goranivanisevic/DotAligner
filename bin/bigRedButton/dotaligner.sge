@@ -28,6 +28,7 @@ cat $SUBSET | while read line ; do
     FILE_2=$(echo $line | awk '{print $2}')
 #    DotAligner -d ${FILE_1%ps}pp -d ${FILE_2%ps}pp -k 0.3 -a -0.05 -b -0.05 -r 5 -t 0.5 -l 0.5 -s 0 -m 15 --seqaln \
 #    		| grep Similarity | awk '{print $3}' | sed 's/,//'  >> $SUBSET.dotaligner
+#   TO DO : we need to include DotAligner in the $PATH via modules or what not...
     /home/stesee/DotAligner/bin/DotAligner -d ${FILE_1%ps}pp -d ${FILE_2%ps}pp -k $KAPPA -a $ALPHA -b $BETA -r $RADIUS -t $THETA -l $DELTANULL -s $SEEDLEN -m $MAXSHIFT -p $PRECISION -n $PNULL $SEQALN \
     		| grep Similarity | awk '{print $3}' | sed 's/,//'  >> $SUBSET.dotaligner
 done
