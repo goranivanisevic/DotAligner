@@ -272,9 +272,7 @@ else
 		#########################################
 		# split data files
 		LINES=`wc -l ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt | awk '{print $1}'`
-		#echo $LINES
 		LINES_PER_ARRAY=$(( ${LINES}/${MAX_CPUS}+1  )) # ensures less array jobs are run than max_slots; balanced IO/CPU performance 
-		#echo $LINES_PER_ARRAY
 		cd $WORK_DIR/$FILE_NAME
 		split -d -a 3 -l $LINES_PER_ARRAY $WORK_DIR/$FILE_NAME/pairwise_comparisons.txt  array_
 	else 
@@ -283,6 +281,8 @@ else
 fi
 # Launch qsub arrays  
 ARRAY_SIZE=$( ls ${WORK_DIR}/${FILE_NAME}/array_* | wc -l )
+echo -e "\e[93m[ NOTE ]\e[0m Launching "$ARRAY_SIZE" arrays of "$LINES_PER_ARRAY" jobs"
+
 ##########################################################################
 ##################				DOTALIGNER 				##################
 if [[ ! -z $RUN_DOTALIGNER ]]; then 
@@ -313,9 +313,7 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		echo -e "         This may take a while... you could run this as a background process (ctrl-z; bg)"
 		CLUST_CMD="${PATH_TO_SGE_SCRIPTS}/postAlign.sge ${WORK_DIR}/${FILE_NAME} dotaligner"
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ; fi
-
-			
-		CMD="qsub -sync y -hold_jid ${DOTALIGNER_ALN} -cwd -V -N DA.clust -pe smp ${PROCS} -b y -j y \
+			CMD="qsub -sync y -hold_jid ${DOTALIGNER_ALN} -cwd -V -N DA.clust -pe smp ${PROCS} -b y -j y \
 			-o ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log $CLUST_CMD"
 		echo -e "\e[92m[ QSUB ]\e[0m $CMD" && DOTALIGNER_CLUST=$( $CMD )
 	fi

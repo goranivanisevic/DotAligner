@@ -37,7 +37,8 @@ cat $SUBSET | while read line ; do
 ## For old dotaligner:
 #    DotAligner -d ${FILE_1%ps}pp -d ${FILE_2%ps}pp -k 0.3 -a -0.05 -b -0.05 -r 5 -t 0.5 -l 0.5 -s 0 -m 15 --seqaln \
 #    		| grep Similarity | awk '{print $3}' | sed 's/,//'  >> $SUBSET.dotaligner
-    $DOTALIGNER_BIN -d ${FILE_1%ps}pp -d ${FILE_2%ps}pp -k $KAPPA -a $ALPHA -b $BETA -r $RADIUS -t $THETA -l $DELTANULL -s $SEEDLEN -m $MAXSHIFT -p $PRECISION -n $PNULL $SEQALN \
+# 	removed this from DotAligner2:  -r $RADIUS
+    $DOTALIGNER_BIN -d ${FILE_1%ps}pp -d ${FILE_2%ps}pp -k $KAPPA -a $ALPHA -b $BETA -t $THETA -l $DELTANULL -s $SEEDLEN -m $MAXSHIFT -p $PRECISION -n $PNULL $SEQALN \
     		| grep Similarity | awk '{print $3}' | sed 's/,//'  >> $SUBSET.dotaligner
 done
 
