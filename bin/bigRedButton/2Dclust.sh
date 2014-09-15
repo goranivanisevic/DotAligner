@@ -117,8 +117,8 @@ if [ -f "$INPUT_FASTA" ]; then FILE_NAME=$TEMP_NAME; else FILE_NAME=${TEMP_NAME}
 
 echo -e "\e[93m[ NOTE ]\e[0m Work dir = "$WORK_DIR/$FILE_NAME
 echo -e "\e[93m[ NOTE ]\e[0m File name = "$FILE_NAME
-if [ ! -d  $WORK_DIR/$FILE_NAME ]; 	then	mkdir $WORK_DIR/$FILE_NAME; fi
-if [ -f "$INPUT_FASTA" && ! -e $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta ]
+if [[ ! -d  $WORK_DIR/$FILE_NAME ]]; 	then	mkdir $WORK_DIR/$FILE_NAME; fi
+if [[ -f "$INPUT_FASTA" && ! -e $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta ]]
 	then ln -s $INPUT_FASTA $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta
 fi
 
