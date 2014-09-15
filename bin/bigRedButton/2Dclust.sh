@@ -82,9 +82,11 @@ done
 
 
 #########################################
-# load envars
+# load envars 
+# N.B. Make sure all required binaires are in yout $PATH if you don't use rocks-modules
 module load gi/ViennaRNA/2.1.3
-module load marsmi/dotaligner/27032014
+#module load marsmi/dotaligner/27032014
+module load marsmi/dotaligner/0.2
 module load marsmi/locarna/1.7.16
 # module load marsmi/carna
 module load marsmi/newick_utils/1.6
@@ -116,7 +118,7 @@ if [ -f "$INPUT_FASTA" ]; then FILE_NAME=$TEMP_NAME; else FILE_NAME=${TEMP_NAME}
 echo -e "\e[93m[ NOTE ]\e[0m Work dir = "$WORK_DIR/$FILE_NAME
 echo -e "\e[93m[ NOTE ]\e[0m File name = "$FILE_NAME
 if [ ! -d  $WORK_DIR/$FILE_NAME ]; 	then	mkdir $WORK_DIR/$FILE_NAME; fi
-if [ -f "$INPUT_FASTA" && ! -e $INPUT_FASTA $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta ]
+if [ -f "$INPUT_FASTA" && ! -e $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta ]
 	then ln -s $INPUT_FASTA $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta
 fi
 
@@ -297,7 +299,7 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		echo -e "\e[92m[ QSUB ]\e[0m "$CMD && DOTALIGNER_ALN=$( $CMD )
 	else
 		echo -e "\e[93m[ NOTE ]\e[0m Parwise alignments already exist! Moving on... "
-		echo -e "	If you want to re-run this step, please delete checkpoint file: "${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint 
+		echo -e "         If you want to re-run this step, please delete checkpoint file: "${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint 
 	fi	
 ##################				CLUSTERING 				##################
 ## Attempt recovery if clustering was successful
@@ -307,7 +309,7 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		rm -rf ${WORK_DIR}/${FILE_NAME}/dotaligner/* 
 		DOTALIGNER_ALN=$( echo ${DOTALIGNER_ALN} | cut -d " " -f 3 | cut -d "." -f 1 )
 		echo -e "\e[93m[ NOTE ]\e[0m Clustering output of DOTALIGNER, awaiting completion of job--if required: "$DOTALIGNER_ALN
-		echo -e "          This may take a while... you could run this as a background process (ctrl-z; bg)"
+		echo -e "         This may take a while... you could run this as a background process (ctrl-z; bg)"
 		CLUST_CMD="${PATH_TO_SGE_SCRIPTS}/postAlign.sge ${WORK_DIR}/${FILE_NAME} dotaligner"
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ; fi
 		CMD="qsub -sync y -hold_jid ${DOTALIGNER_ALN} -cwd -V -N DA.clust -pe smp ${PROCS} -b y -j y \
