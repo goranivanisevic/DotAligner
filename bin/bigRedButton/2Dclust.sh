@@ -296,12 +296,15 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.log ; fi
 		echo -e "\e[93m[ NOTE ]\e[0m DotAligner parameters:"
 		echo -e "     KAPPA = "$KAPPA"\nALPHA = "$ALPHA"\nBETA = "$BETA"\nRADIUS = "$RADIUS"\nTHETA = "$THETA"\nDELTANULL = "$DELTANULL"\nSEEDLEN = "$SEEDLEN"\nMAXSHIFT = "$MAXSHIFT"\nPRECISION = "$PRECISION"\nPNULL = "$PNULL"\nSEQALN = "$SEQALN > ${WORK_DIR}/${FILE_NAME}/DotAligner.log
-		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -l mem_requested=32G,h_vmem=8G 1 -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD} && touch ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint"
+		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -l mem_requested=750M,h_vmem=750M -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD} && touch ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint"
 		echo -e "\e[92m[ QSUB ]\e[0m "$CMD && DOTALIGNER_ALN=$( $CMD )
 	else
 		echo -e "\e[93m[ NOTE ]\e[0m Parwise alignments already exist! Moving on... "
 		echo -e "         If you want to re-run this step, please delete checkpoint file: "${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint 
 	fi	
+	if [[ ! -e ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint  ]]
+		then echo -e "\e[91m[ ERROR ]\e[0m Pairwise comparisons did not complete, or checkpoint file ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint not found"
+	fi
 ##################				CLUSTERING 				##################
 ## Attempt recovery if clustering was successful
 ## Delete dotaligner/srtd.newick to re-run clustering
