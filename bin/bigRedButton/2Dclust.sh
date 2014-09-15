@@ -302,10 +302,7 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		echo -e "\e[93m[ NOTE ]\e[0m Parwise alignments already exist! Moving on... "
 		echo -e "         If you want to re-run this step, please delete checkpoint file: "${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint 
 	fi	
-	if [[ ! -e ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint  ]]
-		then echo -e "\e[91m[ ERROR ]\e[0m Pairwise comparisons did not complete, or checkpoint file ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint not found"
-	fi
-##################				CLUSTERING 				##################
+	##################				CLUSTERING 				##################
 ## Attempt recovery if clustering was successful
 ## Delete dotaligner/srtd.newick to re-run clustering
 ## All clustering will produce a newick tree, but no guarantee there will be clusters 
@@ -316,11 +313,12 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		echo -e "         This may take a while... you could run this as a background process (ctrl-z; bg)"
 		CLUST_CMD="${PATH_TO_SGE_SCRIPTS}/postAlign.sge ${WORK_DIR}/${FILE_NAME} dotaligner"
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ; fi
+
+			
 		CMD="qsub -sync y -hold_jid ${DOTALIGNER_ALN} -cwd -V -N DA.clust -pe smp ${PROCS} -b y -j y \
 			-o ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log $CLUST_CMD"
 		echo -e "\e[92m[ QSUB ]\e[0m $CMD" && DOTALIGNER_CLUST=$( $CMD )
 	fi
-
 ##################				POSTPROCESSING 				##################
 ## Post processing of any identified clusters. 
 #### ${1}/${2}/srtd_a${ALPHA_STAT}_clusters/cluster.X/cluster.X.fa 
@@ -335,7 +333,6 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		POST_CMD="${PATH_TO_SGE_SCRIPTS}/postClust.sge ${WORK_DIR}/${FILE_NAME} dotaligner"		# Setup the command and args
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ; fi
 		CMD="qsub -hold_jid ${DOTALIGNER_CLUST} -cwd -V -N DA.postp -pe smp ${PROCS} -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ${POST_CMD}"		# Setup SGE command
-	
 		echo -e "\e[92m[ QSUB ]\e[0m $CMD" && DOTALIGNER_POST=$( $CMD )							# Print command and execute
 	fi
 fi
