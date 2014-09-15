@@ -88,12 +88,13 @@ module load gi/ViennaRNA/2.1.3
 #module load marsmi/dotaligner/27032014
 module load marsmi/dotaligner/0.2
 module load marsmi/locarna/1.7.16
-# module load marsmi/carna
 module load marsmi/newick_utils/1.6
 module load stesee/PETfold/prebuilt/2.0
 module load stesee/RNAbound/prebuilt/1.1
 module load gi/R/3.0.0 							# requires the following R packages: pvclust, snow, ape
 module load gi/bedtools/2.19.1
+# module load marsmi/carna
+
 
 
 #########################################
@@ -295,7 +296,7 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.log ; fi
 		echo -e "\e[93m[ NOTE ]\e[0m DotAligner parameters:"
 		echo -e "     KAPPA = "$KAPPA"\nALPHA = "$ALPHA"\nBETA = "$BETA"\nRADIUS = "$RADIUS"\nTHETA = "$THETA"\nDELTANULL = "$DELTANULL"\nSEEDLEN = "$SEEDLEN"\nMAXSHIFT = "$MAXSHIFT"\nPRECISION = "$PRECISION"\nPNULL = "$PNULL"\nSEQALN = "$SEQALN > ${WORK_DIR}/${FILE_NAME}/DotAligner.log
-		CMD="qsub -cwd -V -N DotAligner -pe smp -l mem_requested=32G,h_vmem=8G 1 -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD} && touch ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint"
+		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -l mem_requested=32G,h_vmem=8G 1 -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD} && touch ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint"
 		echo -e "\e[92m[ QSUB ]\e[0m "$CMD && DOTALIGNER_ALN=$( $CMD )
 	else
 		echo -e "\e[93m[ NOTE ]\e[0m Parwise alignments already exist! Moving on... "
