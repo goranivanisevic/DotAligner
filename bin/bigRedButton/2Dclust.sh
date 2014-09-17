@@ -296,7 +296,7 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.log ; fi
 		echo -e "\e[93m[ NOTE ]\e[0m DotAligner parameters:"
 		echo -e "     KAPPA = "$KAPPA"\nALPHA = "$ALPHA"\nBETA = "$BETA"\nRADIUS = "$RADIUS"\nTHETA = "$THETA"\nDELTANULL = "$DELTANULL"\nSEEDLEN = "$SEEDLEN"\nMAXSHIFT = "$MAXSHIFT"\nPRECISION = "$PRECISION"\nPNULL = "$PNULL"\nSEQALN = "$SEQALN > ${WORK_DIR}/${FILE_NAME}/DotAligner.log
-		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -l h_vmem=1G -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD} && touch ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint"
+		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -l h_vmem=1G,mem_requested=1G -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD} && touch ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint"
 		echo -e "\e[92m[ QSUB ]\e[0m "$CMD && DOTALIGNER_ALN=$( $CMD )
 	else
 		echo -e "\e[93m[ NOTE ]\e[0m Parwise alignments already exist! Moving on... "
@@ -313,7 +313,7 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		echo -e "         This may take a while... you could run this as a background process (ctrl-z; bg)"
 		CLUST_CMD="${PATH_TO_SGE_SCRIPTS}/postAlign.sge ${WORK_DIR}/${FILE_NAME} dotaligner"
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ; fi
-			CMD="qsub -sync y -hold_jid ${DOTALIGNER_ALN} -cwd -V -N DA.clust -pe smp ${PROCS} -b y -j y \
+			CMD="qsub -sync y -hold_jid ${DOTALIGNER_ALN} -cwd -V -N DA.clust -pe smp ${PROCS} -l h_vmem=4G,mem_requested=4G -b y -j y \
 			-o ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log $CLUST_CMD"
 		echo -e "\e[92m[ QSUB ]\e[0m $CMD" && DOTALIGNER_CLUST=$( $CMD )
 	fi
@@ -330,7 +330,7 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		fi
 		POST_CMD="${PATH_TO_SGE_SCRIPTS}/postClust.sge ${WORK_DIR}/${FILE_NAME} dotaligner"		# Setup the command and args
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ; fi
-		CMD="qsub -hold_jid ${DOTALIGNER_CLUST} -cwd -V -N DA.postp -pe smp ${PROCS} -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ${POST_CMD}"		# Setup SGE command
+		CMD="qsub -hold_jid ${DOTALIGNER_CLUST} -cwd -V -N DA.postp -pe smp ${PROCS} -l h_vmem=8G,mem_requested=8G -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ${POST_CMD}"		# Setup SGE command
 		echo -e "\e[92m[ QSUB ]\e[0m $CMD" && DOTALIGNER_POST=$( $CMD )							# Print command and execute
 	fi
 fi
