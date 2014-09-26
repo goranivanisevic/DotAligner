@@ -16,6 +16,7 @@ export BOOTSTRAPS=10000										# Number of bootstraps
 export ALPHA_STAT=0.99										# Alpha statistic for clustering specificity
 export BETA_STAT=0.0
 export SPAN=150
+export MAX_PER_CLUSTER=8
 
 ### What to run 
 RUN_LOCARNA=
