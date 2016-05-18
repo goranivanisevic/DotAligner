@@ -26,7 +26,7 @@ using namespace std;
 double kappa = 0.5;
 double open = 0.3;
 double ext  = 0.1;
-double tau = 0.5;
+double theta = 0.5;
 double zeta = 0.;
 int mutation_rates_flag = 0;
 int free_endgaps_flag = 0;
@@ -68,7 +68,7 @@ int main( int argc, char ** argv )
     			{"precision", required_argument, 0, 'p'},       // number of digits considered of base pair reliabilities
     			{"pnull", required_argument, 0, 'n'},			// minimal probability
     			{"subopt", required_argument, 0, 's'},			// number of suboptimal sequence/unpaired probability alignments examined
-    			{"tau", required_argument, 0, 't'},				// weight of sequence similarity in sequence compared to unpaired probability similarity
+    			{"theta", required_argument, 0, 't'},			// weight of sequence similarity in sequence compared to unpaired probability similarity
     			{"zeta", required_argument, 0, 'z'},            // weight of unpaired probability similarity compared to paired probabilities to upstream nucleotides
     			{"temp", required_argument, 0, 'T'},            // measure of our interest in suboptimal alignments; analogous to the thermodynamic temperature
     			{"mutation-rates", no_argument, &mutation_rates_flag, 1},  // whether probabilities are multiplied with mutation rates
@@ -107,7 +107,7 @@ int main( int argc, char ** argv )
     			case 'p': precision = atoi(optarg); break;
     			case 'n': pnull = atof(optarg); break;
     			case 's': subopt = atoi(optarg); break;
-    			case 't': tau = atof(optarg); break;
+    			case 't': theta = atof(optarg); break;
     			case 'z': zeta = atof(optarg); break;
     			case 'T': temp = atof(optarg); BETA = 1.0/temp; break;
     			default:  abort();

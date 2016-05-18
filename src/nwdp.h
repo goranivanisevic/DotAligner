@@ -42,7 +42,7 @@ using namespace std;
 
 /* arguments */
 extern double kappa;
-extern double tau;
+extern double theta;
 extern double zeta;
 extern double open;
 extern double ext;

@@ -36,8 +36,8 @@ void usage_dotaligner(char *program)
     cerr << "\n   -p --precision <int>   ... number of digits considered of log-odds of base pair reliabilities (default = 4)";
     cerr << "\n   -n --pnull <prob>      ... minimal probability (default = 0.0005 )";
     cerr << "\n   --mutation-rates       ... usage of statistical substitution models RIBOSUM85-60";
-    cerr << "\n   -z --zeta              ... weight of unpaired probability compared to ratio of upstream pairing probability (0..1; default = 0)";
-    cerr << "\n                          ... only active if flag <mutation-rates> is set";
+    cerr << "\n   -z --zeta              ... weight of unpaired probability compared to upstream pairing probability (0..1; default = 0)";
+    cerr << "\n                              only active if flag <mutation-rates> is set";
     cerr << "\n   -T --temp <double>     ... measure of our interest in suboptimal alignments; analogous to thermodynamic temperature (0..undef; default = 1)";
     cerr << "\n   --free-endgaps         ... whether start and end gaps are free";
     cerr << "\n   --verbose              ... verbose mode";
@@ -254,7 +254,7 @@ double nwdp( string seq_1, vector<double> & probSgl_1, int * idx_1_aln, int L1, 
                 case 'U':  y = 3 ;  break ;
             }
 
-            score = tau * basesub[ x ][ y ] + (1 - tau) * ( 1 - abs( probSgl_1[ i-1 ] - probSgl_2[ j-1 ] ) );
+            score = theta * basesub[ x ][ y ] + (1 - theta) * ( 1 - abs( probSgl_1[ i-1 ] - probSgl_2[ j-1 ] ) );
             //cerr << i << " " << j << " " << score << endl;
             F[ j ][ i ] = max3( P[ j ][ i ], F[ j-1 ][ i-1 ] + score, Q[ j ][ i ], &ptr );
             if( !global && F[ j ][ i ] < 0 )
@@ -413,7 +413,7 @@ double simdp( string seq_1, vector<double> & probDbl_1, int len_1, string seq_2,
 	    		sim += pairmutationrates[ x ][ y ] * ( 1 - abs( probDbl_1[ offset_1 + idx_1_aln[ j ] ] - probDbl_2[ offset_2 + idx_2_aln[ j ] ] ) );
 	    	else
 	    	{
-	    		sim += tau * pairsub[ x ][ y ] + (1 - tau) * ( 1 - abs( probDbl_1[ offset_1 + idx_1_aln[ j ] ] - probDbl_2[ offset_2 + idx_2_aln[ j ] ] ) );
+	    		sim += theta * pairsub[ x ][ y ] + (1 - theta) * ( 1 - abs( probDbl_1[ offset_1 + idx_1_aln[ j ] ] - probDbl_2[ offset_2 + idx_2_aln[ j ] ] ) );
 	    	}
 		}
 	}
@@ -635,7 +635,7 @@ double simbp( string seq_1, vector<double> & probSgl_1, vector<double> & probDbl
 {
 	double sim = 0;
 	double nzeta = 1-zeta;
-	double ntau = 1-tau;
+	double ntheta = 1-theta;
 	int len_aln = strlen(aln_code);
 
 	/* sum scores of aligned bases */
@@ -651,8 +651,8 @@ double simbp( string seq_1, vector<double> & probSgl_1, vector<double> & probDbl
     		       ( zeta * ( 1 - abs( probSgl_1[ idx_1_aln[ i ] ] - probSgl_2[ idx_2_aln[ i ] ] ) ) +
     		       nzeta * ( 1 - abs( probDblUp_1[ idx_1_aln[ i ] ] - probDblUp_2[ idx_2_aln[ i ] ] ) ) );
     	else
-    		sim += tau * basesub[ x ][ y ] +
-    			   ntau * ( 1 - abs( probSgl_1[ idx_1_aln[ i ] ] - probSgl_2[ idx_2_aln[ i ] ] ) );
+    		sim += theta * basesub[ x ][ y ] +
+    			   ntheta * ( 1 - abs( probSgl_1[ idx_1_aln[ i ] ] - probSgl_2[ idx_2_aln[ i ] ] ) );
     }
 
     /* sum scores of gaps */
@@ -858,7 +858,7 @@ aligm align_2_da( sequ *os, iseq *is, u_sc smat, vector<double> & probSgl_long, 
 
 	double sim;
 	double nzeta = 1-zeta;
-	double ntau = 1-tau;
+	double ntheta = 1-theta;
 
 	MapClass::CharIntMap baseindex = MapClass::init_base_index();
     int x, y;
@@ -1040,8 +1040,8 @@ aligm align_2_da( sequ *os, iseq *is, u_sc smat, vector<double> & probSgl_long, 
 	  		       	  ( zeta * ( 1 - abs( probSgl_long[ j-1 ] - probSgl_short[ i-1 ] ) ) +
 	  		          nzeta * ( 1 - abs( probDblUp_long[ j-1 ] - probDblUp_short[ i-1 ] ) ) );
 		    else
-		    	sim = tau * basesub[ x ][ y ] +
-	  			      ntau * ( 1 - abs( probSgl_long[ j-1 ] - probSgl_short[ i-1 ] ) );
+		    	sim = theta * basesub[ x ][ y ] +
+	  			      ntheta * ( 1 - abs( probSgl_long[ j-1 ] - probSgl_short[ i-1 ] ) );
 
 		    /* M */
 		    m.M[i][j]=m.M[i-1][j-1]+sim;
@@ -1092,7 +1092,7 @@ aligm trace_back_da(matrix m, sequ *os, iseq *is, u_sc smat, vector<double> & pr
 
 	double sim;
 	double nzeta = 1-zeta;
-	double ntau = 1-tau;
+	double ntheta = 1-theta;
 
 	MapClass::CharIntMap baseindex = MapClass::init_base_index();
     int x, y;
@@ -1139,8 +1139,8 @@ aligm trace_back_da(matrix m, sequ *os, iseq *is, u_sc smat, vector<double> & pr
 		  		       	  ( zeta * ( 1 - abs( probSgl_long[ j-1 ] - probSgl_short[ i-1 ] ) ) +
 		  		          nzeta * ( 1 - abs( probDblUp_long[ j-1 ] - probDblUp_short[ i-1 ] ) ) );
 			    else
-			    	sim = tau * basesub[ x ][ y ] +
-		  			      ntau * ( 1 - abs( probSgl_long[ j-1 ] - probSgl_short[ i-1 ] ) );
+			    	sim = theta * basesub[ x ][ y ] +
+		  			      ntheta * ( 1 - abs( probSgl_long[ j-1 ] - probSgl_short[ i-1 ] ) );
 
 				if( EQUAL(M[i-1][j-1]+sim, M[i][j]) )
 				{/* nothing to do */}
@@ -1256,7 +1256,7 @@ matrix partf_da(aligm a, vector<double> & probSgl_long, vector<double> & probDbl
 
 	double sim;
 	double nzeta = 1-zeta;
-	double ntau = 1-tau;
+	double ntheta = 1-theta;
 
 	MapClass::CharIntMap baseindex = MapClass::init_base_index();
     int x, y;
@@ -1424,8 +1424,8 @@ matrix partf_da(aligm a, vector<double> & probSgl_long, vector<double> & probDbl
 	  		       	  ( zeta * ( 1 - abs( probSgl_long[ j-1 ] - probSgl_short[ i-1 ] ) ) +
 	  		          nzeta * ( 1 - abs( probDblUp_long[ j-1 ] - probDblUp_short[ i-1 ] ) ) );
 		    else
-		    	sim = tau * basesub[ x ][ y ] +
-	  			      ntau * ( 1 - abs( probSgl_long[ j-1 ] - probSgl_short[ i-1 ] ) );
+		    	sim = theta * basesub[ x ][ y ] +
+	  			      ntheta * ( 1 - abs( probSgl_long[ j-1 ] - probSgl_short[ i-1 ] ) );
 			zM[i][j] = exp(BETA*sim) * (zM[i-1][j-1]+zE[i-1][j-1]+zF[i-1][j-1]);
 			zM[i][j]/=sk*sk;
 		}
@@ -1461,7 +1461,7 @@ matrix revers_partf_da(sequ *os, iseq *is, u_sc m, aligm a, vector<double> & pro
 
 	double sim;
 	double nzeta = 1-zeta;
-	double ntau = 1-tau;
+	double ntheta = 1-theta;
 
 	MapClass::CharIntMap baseindex = MapClass::init_base_index();
     int x, y;
@@ -1612,8 +1612,8 @@ matrix revers_partf_da(sequ *os, iseq *is, u_sc m, aligm a, vector<double> & pro
 			       	  ( zeta * ( 1 - abs( probSgl_long[ j ] - probSgl_short[ i ] ) ) +
 			          nzeta * ( 1 - abs( probDblUp_long[ j ] - probDblUp_short[ i ] ) ) );
 			else
-			   	sim = tau * basesub[ x ][ y ] +
-				      ntau * ( 1 - abs( probSgl_long[ j ] - probSgl_short[ i ] ) );
+			   	sim = theta * basesub[ x ][ y ] +
+				      ntheta * ( 1 - abs( probSgl_long[ j ] - probSgl_short[ i ] ) );
 			rM[i][j] = exp(BETA*sim);
 			rM[i][j] *= (rM[i+1][j+1]+rF[0][j+1]+rE[0][j+1]);
 			rM[i][j] /= sk*sk;
@@ -1904,7 +1904,7 @@ double calc_score_da( char *tr, vector<double> & probSgl_long, vector<double> & 
 
 	double sim;
 	double nzeta = 1-zeta;
-	double ntau = 1-tau;
+	double ntheta = 1-theta;
 
 	MapClass::CharIntMap baseindex = MapClass::init_base_index();
     int x, y;
@@ -1941,8 +1941,8 @@ double calc_score_da( char *tr, vector<double> & probSgl_long, vector<double> & 
 	  		       	  ( zeta * ( 1 - abs( probSgl_long[ k ] - probSgl_short[ j ] ) ) +
 	  		          nzeta * ( 1 - abs( probDblUp_long[ k ] - probDblUp_short[ j ] ) ) );
 		    else
-		    	sim = tau * basesub[ x ][ y ] +
-	  			      ntau * ( 1 - abs( probSgl_long[ k ] - probSgl_short[ j ] ) );
+		    	sim = theta * basesub[ x ][ y ] +
+	  			      ntheta * ( 1 - abs( probSgl_long[ k ] - probSgl_short[ j ] ) );
 
 			g3=0;
 			g4=0;
