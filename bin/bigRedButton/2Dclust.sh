@@ -8,14 +8,15 @@
 
 #########################################
 ## CUSTOM PARAMETERS --- MUST BE DEFINED
-MAX_CPUS=192
+MAX_CPUS=192  # Lesss than 999 and more than 99 currently supported in SGE environment
 export PATH_TO_SGE_SCRIPTS=${HOME}/DotAligner/bin/bigRedButton		# scripts used herein
 export GENOME=/share/ClusterShare/biodata/contrib/genomeIndices_garvan/iGenomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa      # fasta file of reference genome (here hg19)
-export PROCS=16												# Cpus for clustering and mlocarna
+export PROCS=8												# Cpus for clustering and mlocarna
 export BOOTSTRAPS=10000										# Number of bootstraps
-export ALPHA_STAT=0.9										# Alpha statistic for clustering specificity
+export ALPHA_STAT=0.99										# Alpha statistic for clustering specificity
 export BETA_STAT=0.0
 export SPAN=150
+export MAX_PER_CLUSTER=8
 
 ### What to run 
 RUN_LOCARNA=
@@ -82,16 +83,19 @@ done
 
 
 #########################################
-# load envars
+# load envars 
+# N.B. Make sure all required binaires are in yout $PATH if you don't use rocks-modules
 module load gi/ViennaRNA/2.1.3
-module load marsmi/dotaligner/27032014
+#module load marsmi/dotaligner/27032014
+module load marsmi/dotaligner/0.2
 module load marsmi/locarna/1.7.16
-# module load marsmi/carna
 module load marsmi/newick_utils/1.6
 module load stesee/PETfold/prebuilt/2.0
 module load stesee/RNAbound/prebuilt/1.1
 module load gi/R/3.0.0 							# requires the following R packages: pvclust, snow, ape
 module load gi/bedtools/2.19.1
+# module load marsmi/carna
+
 
 
 #########################################
@@ -115,8 +119,10 @@ if [ -f "$INPUT_FASTA" ]; then FILE_NAME=$TEMP_NAME; else FILE_NAME=${TEMP_NAME}
 
 echo -e "\e[93m[ NOTE ]\e[0m Work dir = "$WORK_DIR/$FILE_NAME
 echo -e "\e[93m[ NOTE ]\e[0m File name = "$FILE_NAME
-if [ ! -d  $WORK_DIR/$FILE_NAME ]; 	then	mkdir $WORK_DIR/$FILE_NAME; fi
-if [ -f "$INPUT_FASTA" ]; then ln -s $INPUT_FASTA $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta; fi
+if [[ ! -d  $WORK_DIR/$FILE_NAME ]]; 	then	mkdir $WORK_DIR/$FILE_NAME; fi
+if [[ -f "$INPUT_FASTA" && ! -e $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta ]]
+	then ln -s $INPUT_FASTA $WORK_DIR/$FILE_NAME/${FILE_NAME}.fasta
+fi
 
 
 #########################################
@@ -232,16 +238,26 @@ if [[ ! -e $WORK_DIR/$FILE_NAME/pairwise_comparisons.txt  ]]; then
 	i=1
 	while [ $i -le $STRUCTURES ]; do
  		for (( j = $i ; j <= $STRUCTURES; j++ )); do
-		     	#echo -n `head -n $i $FILE_LIST | tail -n 1`" "
-	     		#echo -n `head -n $j $FILE_LIST | tail -n 1`" "
-	     		#echo $i" "$j
-			FILE1=`head -n $i $FILE_LIST | tail -n 1`
-			FILE2=`head -n $j $FILE_LIST | tail -n 1`
-			TEMP=${FILE1%___*}
-			IDX1=${TEMP##*___}
-			TEMP=${FILE2%___*}
-			IDX2=${TEMP##*___}
-			echo $FILE1" "$FILE2" "$IDX1" "$IDX2
+		    echo -n `head -n $i $FILE_LIST | tail -n 1`" "
+	     	echo -n `head -n $j $FILE_LIST | tail -n 1`" "
+	     	echo $i" "$j
+			
+			## This messes up downstream processing in postAlign.sge
+			## It produces :
+			## 	Filename_1 Filename_2 Filename_1 Filename_2
+			## instead of :
+			##	Filename_1 Filename_2 1 2
+			## vvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+			#FILE1=`head -n $i $FILE_LIST | tail -n 1`
+			#FILE2=`head -n $j $FILE_LIST | tail -n 1`
+			#TEMP=${FILE1%___*}
+			#IDX1=${TEMP##*___}
+			#TEMP=${FILE2%___*}
+			#IDX2=${TEMP##*___}
+			#echo $FILE1" "$FILE2" "$IDX1" "$IDX2  
+			
+			## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 		done
 		i=$(($i+1))
 	done > $WORK_DIR/$FILE_NAME/pairwise_comparisons.txt 
@@ -257,9 +273,7 @@ else
 		#########################################
 		# split data files
 		LINES=`wc -l ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt | awk '{print $1}'`
-		#echo $LINES
-		LINES_PER_ARRAY=$(( ${LINES}/${MAX_CPUS}+1  ))
-		#echo $LINES_PER_ARRAY
+		LINES_PER_ARRAY=$(( ${LINES}/${MAX_CPUS}+1  )) # ensures less array jobs are run than max_slots; balanced IO/CPU performance 
 		cd $WORK_DIR/$FILE_NAME
 		split -d -a 3 -l $LINES_PER_ARRAY $WORK_DIR/$FILE_NAME/pairwise_comparisons.txt  array_
 	else 
@@ -268,23 +282,30 @@ else
 fi
 # Launch qsub arrays  
 ARRAY_SIZE=$( ls ${WORK_DIR}/${FILE_NAME}/array_* | wc -l )
+echo -e "\e[93m[ NOTE ]\e[0m Launching "$ARRAY_SIZE" arrays of "$LINES_PER_ARRAY" jobs"
+
 ##########################################################################
 ##################				DOTALIGNER 				##################
 if [[ ! -z $RUN_DOTALIGNER ]]; then 
-	echo -e "\e[93m[ NOTE ]\e[0m Launching all vs. all pairwise alignments with DotAligner "
-
 ## Attempt recovery if alignment was successful
-## Delete dotaligner/srtd.out.gz to re-run DotAligner
-	if [[ ! -e ${WORK_DIR}/${FILE_NAME}/dotaligner/srtd.out.gz ]]; then 
+## Delete dotaligned.checkpoint to re-run DotAligner
+echo -e  "\e[93m[ NOTE ]\e[0m Delete dotaligned.checkpoint to re-run DotAligner"
+	if [[ ! -e ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint ]]; then 
+		echo -e "\e[93m[ NOTE ]\e[0m Launching all vs. all pairwise alignments with DotAligner "
 		# ensure old files are all deleted if bein re-run
+		rm ${WORK_DIR}/${FILE_NAME}/array_*.dotaligner
 		#ALN_CMD="${PATH_TO_SGE_SCRIPTS}/dotaligner.sge ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt"
 		ALN_CMD="${PATH_TO_SGE_SCRIPTS}/dotaligner.sge ${WORK_DIR}/${FILE_NAME}/pairwise_comparisons.txt $KAPPA $ALPHA $BETA $RADIUS $THETA $DELTANULL $SEEDLEN $MAXSHIFT $PRECISION $PNULL $SEQALN"
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.log ; fi
-		echo -e "KAPPA = "$KAPPA"\nALPHA = "$ALPHA"\nBETA = "$BETA"\nRADIUS = "$RADIUS"\nTHETA = "$THETA"\nDELTANULL = "$DELTANULL"\nSEEDLEN = "$SEEDLEN"\nMAXSHIFT = "$MAXSHIFT"\nPRECISION = "$PRECISION"\nPNULL = "$PNULL"\nSEQALN = "$SEQALN > ${WORK_DIR}/${FILE_NAME}/DotAligner.log
-		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD}"
+		echo -e "\e[93m[ NOTE ]\e[0m DotAligner parameters:"
+		echo -e "     KAPPA = "$KAPPA"\nALPHA = "$ALPHA"\nBETA = "$BETA"\nRADIUS = "$RADIUS"\nTHETA = "$THETA"\nDELTANULL = "$DELTANULL"\nSEEDLEN = "$SEEDLEN"\nMAXSHIFT = "$MAXSHIFT"\nPRECISION = "$PRECISION"\nPNULL = "$PNULL"\nSEQALN = "$SEQALN > ${WORK_DIR}/${FILE_NAME}/DotAligner.log
+		CMD="qsub -cwd -V -N DotAligner -pe smp 1 -l h_vmem=4G,mem_requested=4G -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.log ${ALN_CMD} && touch ${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint"
 		echo -e "\e[92m[ QSUB ]\e[0m "$CMD && DOTALIGNER_ALN=$( $CMD )
+	else
+		echo -e "\e[93m[ NOTE ]\e[0m Parwise alignments already exist! Moving on... "
+		echo -e "         If you want to re-run this step, please delete checkpoint file: "${WORK_DIR}/${FILE_NAME}/dotaligned.checkpoint 
 	fi	
-##################				CLUSTERING 				##################
+	##################				CLUSTERING 				##################
 ## Attempt recovery if clustering was successful
 ## Delete dotaligner/srtd.newick to re-run clustering
 ## All clustering will produce a newick tree, but no guarantee there will be clusters 
@@ -294,12 +315,11 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		echo -e "\e[93m[ NOTE ]\e[0m Clustering output of DOTALIGNER, awaiting completion of job--if required: "$DOTALIGNER_ALN
 		echo -e "         This may take a while... you could run this as a background process (ctrl-z; bg)"
 		CLUST_CMD="${PATH_TO_SGE_SCRIPTS}/postAlign.sge ${WORK_DIR}/${FILE_NAME} dotaligner"
-		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ; fi
-		CMD="qsub -sync y -hold_jid ${DOTALIGNER_ALN} -cwd -V -N DA.clust -pe smp ${PROCS} -b y -j y \
+		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log ; fi
+			CMD="qsub -sync y -hold_jid ${DOTALIGNER_ALN} -cwd -V -N DA.clust -pe smp ${PROCS} -l h_vmem=4G,mem_requested=4G -b y -j y \
 			-o ${WORK_DIR}/${FILE_NAME}/DotAligner.clust.log $CLUST_CMD"
 		echo -e "\e[92m[ QSUB ]\e[0m $CMD" && DOTALIGNER_CLUST=$( $CMD )
 	fi
-
 ##################				POSTPROCESSING 				##################
 ## Post processing of any identified clusters. 
 #### ${1}/${2}/srtd_a${ALPHA_STAT}_clusters/cluster.X/cluster.X.fa 
@@ -313,8 +333,7 @@ if [[ ! -z $RUN_DOTALIGNER ]]; then
 		fi
 		POST_CMD="${PATH_TO_SGE_SCRIPTS}/postClust.sge ${WORK_DIR}/${FILE_NAME} dotaligner"		# Setup the command and args
 		if [[ -e ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ]]; then rm ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ; fi
-		CMD="qsub -hold_jid ${DOTALIGNER_CLUST} -cwd -V -N DA.postp -pe smp ${PROCS} -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ${POST_CMD}"		# Setup SGE command
-	
+		CMD="qsub -hold_jid ${DOTALIGNER_CLUST} -cwd -V -N DA.postp -pe smp ${PROCS} -l h_vmem=8G,mem_requested=8G -t 1-${ARRAY_SIZE} -b y -j y -o ${WORK_DIR}/${FILE_NAME}/DotAligner.post.log ${POST_CMD}"		# Setup SGE command
 		echo -e "\e[92m[ QSUB ]\e[0m $CMD" && DOTALIGNER_POST=$( $CMD )							# Print command and execute
 	fi
 fi
